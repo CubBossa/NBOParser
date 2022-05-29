@@ -1,0 +1,19 @@
+
+
+example := {
+    key: "value",
+    sound: &other,
+    list: ["i am", "a string", "list"],
+    map: [
+        {key: "value"},
+        {key: "value"}
+    ]
+}
+
+
+START -> (ELEMENT)*
+ELEMENT -> DECLARATION BLOCK
+BLOCK -> { (ENTRY ,)* ENTRY }
+ENTRY -> KEY: VALUE
+VALUE -> REFERENCE | BLOCK | LIST | PRIMITIVE
+LIST -> [ ((VALUE ,)* VALUE)? ]
