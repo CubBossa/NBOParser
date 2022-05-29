@@ -17,7 +17,7 @@ public class NBOInterpreter {
 		List<String> references = new ArrayList<>();
 
 		for (NBOParser.NBOTree t : tree.lined()) {
-			if (t instanceof NBOParser.NBODeclarationTree declaration) {
+			if (t instanceof NBOParser.NBODeclaration declaration) {
 				references.add(declaration.getDeclaration());
 				declaration.setType(withTable.getOrDefault(declaration.getType(), declaration.getType()));
 			} else if (t instanceof NBOParser.NBOReference ref) {

@@ -57,8 +57,6 @@ public class NBOParser {
 		lexer.addToken(ASSIGN);
 		lexer.addToken(COLON);
 
-		lexer.addToken(WITH);
-		lexer.addToken(AS);
 		lexer.addToken(KEY);
 		lexer.addToken(REFERENCE);
 
@@ -95,22 +93,65 @@ public class NBOParser {
 		this.tokenMatches.addAll(lexer.tokenize(string));
 	}
 
-	public NBOObjectTree createAST(List<Lexer.Match> matchList) throws NBOParseException {
+	public NBORootTree createAST(List<Lexer.Match> matchList) throws NBOParseException {
 
 		Stack<Lexer.Match> matches = new Stack<>();
 		for (int i = matchList.size() - 1; i >= 0; i--) {
 			matches.add(matchList.get(i));
 		}
-		NBOObjectTree tree = new NBOObjectTree();
-		while (!matches.empty()) {
-			tree.addObject(parseDeclaration(matches));
+		NBOObjectTree imports = new NBOObjectTree();
+		while (matches.peek().token().equals(WITH_OPEN)) {
+			imports.addObject(parseImports(matches));
 		}
-		return tree;
+		NBOObjectTree objects = new NBOObjectTree();
+		while (!matches.empty()) {
+			objects.addObject(parseDeclaration(matches));
+		}
+		return new NBORootTree(imports, objects);
+	}
+
+	private NBOTree parseImports(Stack<Lexer.Match> tokens) throws NBOParseException {
+		if (tokens.empty() || !tokens.peek().token().equals(WITH_OPEN)) {
+			throw new NBOParseException(""); //TODO throw
+		}
+		tokens.pop();
+		if (!tokens.empty() && tokens.peek().token().equals(KEY)) {
+			Lexer.Match with = tokens.pop();
+			if (!with.string().equalsIgnoreCase("with")) {
+				throw new NBOParseException(with.string() + " vs. " + with.token().toString()); //TODO
+			}
+		} else {
+			throw new NBOParseException(""); //TODO
+		}
+		Lexer.Match alias;
+		if (!tokens.empty() && tokens.peek().token().equals(KEY)) {
+			alias = tokens.pop();
+		} else {
+			throw new NBOParseException(""); //TODO
+		}
+		if (!tokens.empty() && tokens.peek().token().equals(KEY)) {
+			Lexer.Match as = tokens.pop();
+			if (!as.string().equalsIgnoreCase("as")) {
+				throw new NBOParseException(""); //TODO
+			}
+		} else {
+			throw new NBOParseException(""); //TODO
+		}
+		Lexer.Match className;
+		if (!tokens.empty() && tokens.peek().token().equals(KEY)) {
+			className = tokens.pop();
+		} else {
+			throw new NBOParseException(""); //TODO
+		}
+		if (tokens.empty() || !tokens.pop().token().equals(WITH_CLOSE)) {
+			throw new NBOParseException(""); //TODO
+		}
+		return new NBOImport(alias.string(), className.string());
 	}
 
 	private NBOTree parseDeclaration(Stack<Lexer.Match> tokens) throws NBOParseException {
 		if (tokens.empty() || !tokens.peek().token().equals(KEY)) {
-			throw new NBOParseException(""); //TODO
+			throw new NBOParseException(tokens.peek().string()); //TODO
 		}
 		Lexer.Match object = tokens.pop();
 		if (tokens.empty() || !tokens.pop().token().equals(ASSIGN)) {
@@ -119,7 +160,7 @@ public class NBOParser {
 		if (tokens.empty() || !tokens.peek().token().equals(KEY)) {
 			throw new NBOParseException(""); //TODO
 		}
-		return new NBODeclarationTree(object.string(), tokens.pop().string(), parseBlock(tokens));
+		return new NBODeclaration(object.string(), tokens.pop().string(), parseBlock(tokens));
 	}
 
 	private NBOTree parseBlock(Stack<Lexer.Match> tokens) throws NBOParseException {
@@ -170,7 +211,7 @@ public class NBOParser {
 		if (t.equals(QUOTE)) {
 			return new NBOPrimitive(tokens.pop());
 		} else if (t.equals(REFERENCE)) {
-			return new NBOReference(tokens.pop().string());
+			return new NBOReference(tokens.pop().string().substring(1));
 		} else if (t.equals(BRACKET_OPEN)) {
 			return parseBlock(tokens);
 		} else if (t.equals(LIST_OPEN)) {
@@ -221,10 +262,41 @@ public class NBOParser {
 		public abstract List<NBOTree> lined();
 	}
 
+	@RequiredArgsConstructor
+	@Getter
+	public class NBORootTree extends NBOTree {
+		private final NBOObjectTree imports;
+		private final NBOObjectTree objects;
+
+		@Override public String toString(int indent) {
+			return imports.toString(indent + 1) + objects.toString(indent + 1);
+		}
+
+		@Override public List<NBOTree> lined() {
+			return addAndReturn(imports.lined(), objects.lined().toArray(new NBOTree[0]));
+		}
+	}
+
 	@Getter
 	@Setter
 	@AllArgsConstructor
-	public class NBODeclarationTree extends NBOTree {
+	public class NBOImport extends NBOTree {
+		private String alias;
+		private String className;
+
+		public String toString(int indent) {
+			return "\n" + "-".repeat(indent) + alias + " as " + className;
+		}
+
+		public List<NBOTree> lined() {
+			return addAndReturn(new ArrayList<>(), this);
+		}
+	}
+
+	@Getter
+	@Setter
+	@AllArgsConstructor
+	public class NBODeclaration extends NBOTree {
 		private String declaration;
 		private String type;
 		private final NBOTree block;
@@ -343,8 +415,8 @@ public class NBOParser {
 		}
 	}
 
-	private static <T> List<T> addAndReturn(List<T> list, T element) {
-		list.add(element);
+	private static <T> List<T> addAndReturn(List<T> list, T... element) {
+		list.addAll(List.of(element));
 		return list;
 	}
 }
