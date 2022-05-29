@@ -1,6 +1,10 @@
 
+<with Tree as de.cubbossa.example.forest.Tree>
+<with GUn as de.cubbossa.example.forest.Gun>
 
-example := {
+other := Gun{size: "50"}
+
+example := Tree{
     key: "value",
     sound: &other,
     list: ["i am", "a string", "list"],

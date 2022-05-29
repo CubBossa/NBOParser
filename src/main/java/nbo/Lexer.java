@@ -11,14 +11,14 @@ public class Lexer {
 	public record Match(String string, Token token) {
 	}
 
-	private final Collection<Token> preserve;
-	private final Collection<Token> skip;
-	private final Collection<Token> tokens;
+	private final List<Token> preserve;
+	private final List<Token> skip;
+	private final List<Token> tokens;
 
 	public Lexer() {
-		preserve = new HashSet<>();
-		skip = new HashSet<>();
-		tokens = new HashSet<>();
+		preserve = new ArrayList<>();
+		skip = new ArrayList<>();
+		tokens = new ArrayList<>();
 	}
 
 	public void addPreserve(Token token) {
