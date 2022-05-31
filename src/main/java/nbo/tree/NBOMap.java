@@ -1,12 +1,9 @@
 package nbo.tree;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.List;
+import java.util.*;
 import java.util.stream.Collectors;
 
-public class NBOMap extends HashMap<String, NBOTree> implements NBOTree {
+public class NBOMap extends LinkedHashMap<String, NBOTree> implements NBOTree {
 
     @Override
     public Object getValue() {
@@ -23,7 +20,7 @@ public class NBOMap extends HashMap<String, NBOTree> implements NBOTree {
         if(size() == 0) {
             return "{}";
         } else if(size() == 1) {
-            return "{" + entrySet().stream().findAny().map(Entry::getValue).orElse(new NBOMap()).pretty(indent).replace("\n", "\n" + indent) + "}";
+            return "{" + entrySet().stream().findAny().map(Map.Entry::getValue).orElse(new NBOMap()).pretty(indent).replace("\n", "\n" + indent) + "}";
         }
         return "{\n" + indent + entrySet().stream()
                 .map(e -> e.getKey() + ": " + e.getValue().pretty(indent).replace("\n", "\n" + indent))
