@@ -4,20 +4,14 @@
 
 other := Gun{size: "50"}
 
+Vector := Vector{values: [1, 2, 3]}
+
 example := Tree{
     key: "value",
     sound: &other,
     list: ["i am", "a string", "list"],
     map: [
-        {key: "value"},
-        {key: "value"}
+        {key: "value", other: "value"},
+        {key: "value", other: "value"}
     ]
 }
-
-
-START -> (ELEMENT)*
-ELEMENT -> DECLARATION BLOCK
-BLOCK -> { (ENTRY ,)* ENTRY }
-ENTRY -> KEY: VALUE
-VALUE -> REFERENCE | BLOCK | LIST | PRIMITIVE
-LIST -> [ ((VALUE ,)* VALUE)? ]

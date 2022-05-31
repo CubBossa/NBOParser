@@ -17,13 +17,18 @@ public class NBOMap extends LinkedHashMap<String, NBOTree> implements NBOTree {
 
     @Override
     public String pretty(String indent) {
-        if(size() == 0) {
-            return "{}";
-        } else if(size() == 1) {
-            return "{" + entrySet().stream().findAny().map(Map.Entry::getValue).orElse(new NBOMap()).pretty(indent).replace("\n", "\n" + indent) + "}";
+        boolean breakLines = size() > 1;
+        StringBuilder s = new StringBuilder("{");
+        if (breakLines) {
+            s.append("\n").append(indent);
         }
-        return "{\n" + indent + entrySet().stream()
+        s.append(entrySet().stream()
                 .map(e -> e.getKey() + ": " + e.getValue().pretty(indent).replace("\n", "\n" + indent))
-                .collect(Collectors.joining(",\n" + indent)) + "\n}";
+                .collect(Collectors.joining(",\n" + indent)));
+        if (breakLines) {
+            s.append("\n");
+        }
+        s.append("}");
+        return s.toString();
     }
 }

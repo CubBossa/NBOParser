@@ -26,9 +26,9 @@ public class NBOParser {
     public static final Token COLON = new Token("COLON", Pattern.compile(":"));
     public static final Token ASSIGN = new Token("ASSIGN", Pattern.compile(":="));
     public static final Token KEY = new Token("KEY", Pattern.compile("[a-zA-Z][a-zA-Z0-9_.$]*"));
-    public static final Token BOOLEAN = new Token("BOOLEAN", Pattern.compile("(true|false)|[10][bB]"));
-    public static final Token FLOAT = new Token("FLOAT", Pattern.compile("[0-9]+([fF]|\\.[0-9]+[fF]?)"));
-    public static final Token INTEGER = new Token("INT", Pattern.compile("[0-9]+[iI]?|0x[0-9a-f]+[iI]?]"));
+    public static final Token BOOLEAN = new Token("BOOLEAN", Pattern.compile("([\"']?)((true|false)|([10][bB]))\\1"));
+    public static final Token FLOAT = new Token("FLOAT", Pattern.compile("([\"']?)([0-9]+([fF]|\\.[0-9]+[fF]?))\\1"));
+    public static final Token INTEGER = new Token("INT", Pattern.compile("([\"']?)(0[xX][0-9a-fA-F]+[iI]?|[0-9]+[iI]?)\\1"));
     public static final Token REFERENCE = new Token("REFERENCE", Pattern.compile("&[a-zA-Z][a-zA-Z0-9_.$]*"));
     public static final Token SEPARATOR = new Token("SEPARATOR", Pattern.compile(","));
     public static final Token BRACKET_OPEN = new Token("BRACKET_OPEN", Pattern.compile("\\{"));
@@ -39,7 +39,6 @@ public class NBOParser {
     public static final Token WITH_CLOSE = new Token("WITH_CLOSE", Pattern.compile(">"));
     public static final Token WITH = new Token("WITH", Pattern.compile("with"));
     public static final Token AS = new Token("AS", Pattern.compile("as"));
-
 
     private String input = "";
     private final Tokenizer tokenizer;
@@ -61,8 +60,10 @@ public class NBOParser {
         tokenizer.addToken(ASSIGN);
         tokenizer.addToken(COLON);
 
-        tokenizer.addToken(KEY);
         tokenizer.addToken(BOOLEAN);
+        tokenizer.addToken(FLOAT);
+        tokenizer.addToken(INTEGER);
+        tokenizer.addToken(KEY);
         tokenizer.addToken(REFERENCE);
 
         tokenizer.addToken(BRACKET_OPEN);
@@ -98,7 +99,7 @@ public class NBOParser {
             matches.add(tokenMatches.get(i));
         }
         NBOMap imports = new NBOMap();
-        while (matches.peek().token().equals(WITH_OPEN)) {
+        while (!matches.empty() && matches.peek().token().equals(WITH_OPEN)) {
             var entry = parseImport(matches);
             imports.put(entry.getKey(), entry.getValue());
         }
@@ -223,6 +224,12 @@ public class NBOParser {
             return parseObject(tokens);
         } else if (t.equals(QUOTE)) {
             return new NBOString(tokens.pop().string());
+        } else if (t.equals(BOOLEAN)) {
+            return new NBOBool(tokens.pop().string());
+        } else if (t.equals(FLOAT)) {
+            return new NBOFloat(tokens.pop().string());
+        } else if (t.equals(INTEGER)) {
+            return new NBOInteger(tokens.pop().string());
         } else if (t.equals(REFERENCE)) {
             return new NBOReference(tokens.pop().string().substring(1));
         } else if (t.equals(BRACKET_OPEN)) {

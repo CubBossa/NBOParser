@@ -1,5 +1,6 @@
 package nbo;
 
+import lombok.Getter;
 import nbo.tree.*;
 
 import java.io.File;
@@ -11,6 +12,7 @@ import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+@Getter
 public class NBOFile {
 
     public interface ConvertTo {
@@ -171,7 +173,7 @@ public class NBOFile {
             for (var entry : objects.entrySet()) {
                 file.append("\n").append(entry.getKey())
                         .append(" := ")
-                        .append(entry.getValue().pretty("    "))
+                        .append(entry.getValue() == null ? "null" : entry.getValue().pretty("    "))
                         .append("\n");
             }
         }

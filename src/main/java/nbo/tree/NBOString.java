@@ -9,9 +9,17 @@ import java.util.List;
 
 @Getter
 @Setter
-@AllArgsConstructor
 public class NBOString implements NBOTree {
     private String value;
+
+    public NBOString(String value) {
+
+        this.value = value.startsWith("'") || value.startsWith("\"") ? value.substring(1, value.length() - 1) : value;
+    }
+
+    public Object getValue() {
+        return "'" + value + "'";
+    }
 
     @Override
     public List<NBOTree> getSubTrees() {
