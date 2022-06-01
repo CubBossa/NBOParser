@@ -3,7 +3,7 @@
 The NBO File Format offers a way for minecraft users to keep their configuration files simple. NBO stands for named binary objects and refers to the json like NBT format introduced by minecraft. NBO extends this format with object references. Some ressources i made require many simple objects in relation to each other. This might be easy in code but quite hard to setup for yml users. With NBO, one can simply declare NBT trees and reference them in other trees.
 
 Example:
-```json
+```
 sound := Sound{
   sound: "minecraft:entity.firework_rocket.blast", 
   volume: 1f, 
@@ -67,7 +67,7 @@ effect_player:
 </td>
 <td>
   
-```json
+```
 other_effect := SoundPlayer{
   sound: 'minecraft:entity.villager.no', 
   volume: 1.0, 
