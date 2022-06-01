@@ -15,12 +15,18 @@ public class NBOString implements NBOTree {
         this.value = value.startsWith("'") || value.startsWith("\"") ? value.substring(1, value.length() - 1) : value;
     }
 
-    @Override public String toString() {
+    @Override
+    public String toString() {
         return (String) getValue();
     }
 
+    @Override
     public Object getValue() {
         return "'" + value + "'";
+    }
+
+    public String getValueRaw() {
+        return value;
     }
 
     @Override

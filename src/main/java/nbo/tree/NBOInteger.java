@@ -26,7 +26,13 @@ public class NBOInteger implements NBOTree {
         return getValue().toString();
     }
 
+    @Override
     public Object getValue() {
+        return value;
+    }
+
+    @Override
+    public Object getValueRaw() {
         return value;
     }
 

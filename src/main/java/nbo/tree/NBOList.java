@@ -12,6 +12,11 @@ public class NBOList extends ArrayList<NBOTree> implements NBOTree {
     }
 
     @Override
+    public Object getValueRaw() {
+        return "List";
+    }
+
+    @Override
     public List<NBOTree> getSubTrees() {
         return stream().flatMap(tree -> tree.getSubTrees().stream()).collect(Collectors.toList());
     }

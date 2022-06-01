@@ -7,4 +7,7 @@ public interface NBOTree {
     List<NBOTree> getSubTrees();
 
     Object getValue();
+
+    Object getValueRaw();
+
 }

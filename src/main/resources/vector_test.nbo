@@ -1,0 +1,27 @@
+
+<with Vec as nbo.TokenizerTest$Vector3f>
+<with Mat as nbo.TokenizerTest$Matrix3f>
+
+unit_1 := Vec {
+    x: 1.0,
+    y: 0.0,
+    z: 0.0
+}
+
+unit_2 := Vec {
+    x: 0.f,
+    y: 1.f,
+    z: 0.f
+}
+
+unit_3 := Vec {
+    x: 0.f,
+    y: 0.f,
+    z: 1.f
+}
+
+mat := Mat {
+    col1: &unit_1,
+    col2: &unit_2,
+    col3: &unit_3,
+}

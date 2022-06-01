@@ -45,9 +45,16 @@ public class NBOFile {
         new NBOInterpreter().interpret(file.root);
 
         NBOMap objects = (NBOMap) file.root.get(KEY_OBJECTS);
+        NBOMap imports = (NBOMap) file.root.get(KEY_IMPORTS);
+
+        NBOSerializationContext context = new NBOSerializationContext();
+        imports.forEach((s, nboTree) -> context.getClassImports().put(s, ((NBOString) nboTree).getValueRaw()));
+
         for (var entry : objects.entrySet()) {
             NBOObject object = (NBOObject) entry.getValue();
-            file.objectMap.put(entry.getKey(), NBOSerializer.deserialize(object));
+            Object deserialized = NBOSerializer.deserialize(object, context);
+            file.objectMap.put(entry.getKey(), deserialized);
+            context.getReferenceObjects().put(entry.getKey(), deserialized);
         }
         return file;
     }

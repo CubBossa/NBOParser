@@ -15,6 +15,11 @@ public class NBOMap extends LinkedHashMap<String, NBOTree> implements NBOTree {
     }
 
     @Override
+    public Object getValueRaw() {
+        return "Map";
+    }
+
+    @Override
     public List<NBOTree> getSubTrees() {
         return new ArrayList<>(values());
     }
