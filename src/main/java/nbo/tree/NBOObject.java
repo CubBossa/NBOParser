@@ -10,9 +10,4 @@ import lombok.Setter;
 public class NBOObject extends NBOMap {
 
     private String type;
-
-    @Override
-    public String pretty(String indent) {
-        return type + super.pretty(indent);
-    }
 }

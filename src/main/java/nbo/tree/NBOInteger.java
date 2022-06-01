@@ -22,6 +22,10 @@ public class NBOInteger implements NBOTree {
         value = Integer.parseInt(input);
     }
 
+    @Override public String toString() {
+        return getValue().toString();
+    }
+
     public Object getValue() {
         return value;
     }

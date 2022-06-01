@@ -22,6 +22,10 @@ public class NBOBool implements NBOTree {
         value = input.equals("1") || input.equals("1b") || input.equals("true");
     }
 
+    @Override public String toString() {
+        return getValue().toString();
+    }
+
     @Override
     public Object getValue() {
         return value;

@@ -22,6 +22,10 @@ public class NBOFloat implements NBOTree {
         value = Float.parseFloat(input);
     }
 
+    @Override public String toString() {
+        return getValue().toString();
+    }
+
     public Object getValue() {
         return value;
     }

@@ -1,16 +1,10 @@
 package nbo;
 
-import lombok.AllArgsConstructor;
 import lombok.Getter;
-import lombok.RequiredArgsConstructor;
-import lombok.Setter;
 import nbo.tree.*;
 
 import java.util.*;
-import java.util.function.Function;
 import java.util.regex.Pattern;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 @Getter
 public class NBOParser {
