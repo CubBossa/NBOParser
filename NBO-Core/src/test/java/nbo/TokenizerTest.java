@@ -6,7 +6,8 @@ import java.io.File;
 import java.io.IOException;
 import java.util.Map;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 class TokenizerTest {
 
@@ -49,7 +50,6 @@ class TokenizerTest {
 	private final String example1 = "<with Tree as OtherTree> assign := Type{key: '&reference', list: ['a', 'x', 'v']}";
 	private final String example2 = "<with Tree as OtherTree>\n<with Cow as Pig>\nxy := Type{key: 'a'}  assign := Type{key: &xy, other: 'xy', block: {key: 'lulu', mehr: 'hai'}, list2: [1b, 0B, true], list: ['x', {key: 'value'}, 'z', 'a', 'b']}";
 
-	private static final File TEST_FILE = new File("src/main/resources/test.nbo");
 	private static final File TEST_FILE_VECTOR = new File("src/main/resources/vector_test.nbo");
 
 	@Test
@@ -73,25 +73,55 @@ class TokenizerTest {
 
 	@Test
 	public void writeToFile() throws IOException, NBOParseException, ClassNotFoundException {
-		NBOSerializer.register(File.class, s -> new File((String) s.get("path")), f -> Map.of("path", f.getAbsolutePath()));
-		NBOFile file = NBOFile.loadFile(TEST_FILE);
-		file.setObject("a_file", TEST_FILE);
-		System.out.println(NBOFile.formatToFileString(file.getRoot()));
+		NBOSerializer serializer = new NBOSerializer()
+				.register(
+						Vector3f.class,
+						Vector3f::deserialize,
+						Vector3f::serialize
+				).register(
+						Matrix3f.class,
+						Matrix3f::deserialize,
+						Matrix3f::serialize
+				);
+
+		NBOFile file = NBOFile.loadString("", serializer);
+		file.setImport("Vec", Vector3f.class);
+		file.setImport("Mat", Matrix3f.class);
+		file.setObject("matrix", new Matrix3f(new Vector3f(0, 1, 2), new Vector3f(3, 4, 5), new Vector3f(4, 5, 6)));
+
+		assertEquals("""
+				# IMPORTS
+
+				<with Vec as 'nbo.TokenizerTest$Vector3f'>
+				<with Mat as 'nbo.TokenizerTest$Matrix3f'>
+
+
+				# OBJECTS
+
+				matrix := Mat {
+				    col2: Vec {x: 3.0, y: 4.0, z: 5.0},
+				    col3: Vec {x: 4.0, y: 5.0, z: 6.0},
+				    col1: Vec {x: 0.0, y: 1.0, z: 2.0}
+				}
+				""", NBOFile.formatToFileString(file.getRoot()));
+
+
 	}
 
 	@Test
 	public void readFromFile() throws IOException, NBOParseException, ClassNotFoundException {
-		NBOSerializer.register(
-				Vector3f.class,
-				Vector3f::deserialize,
-				Vector3f::serialize
-		);
-		NBOSerializer.register(
-				Matrix3f.class,
-				Matrix3f::deserialize,
-				Matrix3f::serialize
-		);
-		NBOFile file = NBOFile.loadFile(TEST_FILE_VECTOR);
+		NBOSerializer serializer = new NBOSerializer()
+				.register(
+						Vector3f.class,
+						Vector3f::deserialize,
+						Vector3f::serialize
+				).register(
+						Matrix3f.class,
+						Matrix3f::deserialize,
+						Matrix3f::serialize
+				);
+
+		NBOFile file = NBOFile.loadFile(TEST_FILE_VECTOR, serializer);
 
 		Vector3f unit1 = file.get("unit_1");
 		assertNotNull(unit1, "unit1 should not be null, as it should be defined in vector_test.nbo");

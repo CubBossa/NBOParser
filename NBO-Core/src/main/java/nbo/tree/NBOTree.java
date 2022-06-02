@@ -9,5 +9,4 @@ public interface NBOTree {
     Object getValue();
 
     Object getValueRaw();
-
 }

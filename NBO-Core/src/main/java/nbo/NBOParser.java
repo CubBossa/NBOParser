@@ -15,8 +15,8 @@ public class NBOParser {
     public static final Token SPACE = new Token("SPACE", Pattern.compile("\s+"));
     public static final Token NEWLINE = new Token("NEWLINE", Pattern.compile("\n"));
     public static final Token TAB = new Token("TAB", Pattern.compile("\t"));
-    public static final Token SHRUG1 = new Token("NO_IDEA", Pattern.compile("\r"));
-    public static final Token SHRUG2 = new Token("NO_IDEA", Pattern.compile("\b"));
+    public static final Token CARRIAGE_RETURN = new Token("CARRIAGE_RETURN", Pattern.compile("\r"));
+    public static final Token BACKSPACE = new Token("BACKSPACE", Pattern.compile("\b"));
     public static final Token COLON = new Token("COLON", Pattern.compile(":"));
     public static final Token ASSIGN = new Token("ASSIGN", Pattern.compile(":="));
     public static final Token KEY = new Token("KEY", Pattern.compile("[a-zA-Z][a-zA-Z0-9_.$]*"));
@@ -47,8 +47,8 @@ public class NBOParser {
         tokenizer.addSkip(SPACE);
         tokenizer.addSkip(NEWLINE);
         tokenizer.addSkip(TAB);
-        tokenizer.addSkip(SHRUG1);
-        tokenizer.addSkip(SHRUG2);
+        tokenizer.addSkip(CARRIAGE_RETURN);
+        tokenizer.addSkip(BACKSPACE);
 
         tokenizer.addToken(SEPARATOR);
         tokenizer.addToken(ASSIGN);
