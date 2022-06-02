@@ -13,12 +13,18 @@ import java.util.List;
 public class NBOReference implements NBOTree {
     private String reference;
 
-    @Override public String toString() {
+    @Override
+    public String toString() {
         return "&" + getValue();
     }
 
     @Override
-    public Object getValue() {
+    public String getValue() {
+        return reference;
+    }
+
+    @Override
+    public String getValueRaw() {
         return reference;
     }
 

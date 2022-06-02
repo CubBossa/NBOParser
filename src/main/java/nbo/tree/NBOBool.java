@@ -32,6 +32,11 @@ public class NBOBool implements NBOTree {
     }
 
     @Override
+    public Object getValueRaw() {
+        return value;
+    }
+
+    @Override
     public List<NBOTree> getSubTrees() {
         return new ArrayList<>();
     }

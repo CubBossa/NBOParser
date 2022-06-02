@@ -1,6 +1,6 @@
 
 <with Tree as de.cubbossa.example.forest.Tree>
-<with GUn as de.cubbossa.example.forest.Gun>
+<with Gun as de.cubbossa.example.forest.Gun>
 
 other := Gun{size: "50"}
 

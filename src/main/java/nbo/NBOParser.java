@@ -21,7 +21,7 @@ public class NBOParser {
     public static final Token ASSIGN = new Token("ASSIGN", Pattern.compile(":="));
     public static final Token KEY = new Token("KEY", Pattern.compile("[a-zA-Z][a-zA-Z0-9_.$]*"));
     public static final Token BOOLEAN = new Token("BOOLEAN", Pattern.compile("([\"']?)((true|false)|([10][bB]))\\1"));
-    public static final Token FLOAT = new Token("FLOAT", Pattern.compile("([\"']?)([0-9]+([fF]|\\.[0-9]+[fF]?))\\1"));
+    public static final Token FLOAT = new Token("FLOAT", Pattern.compile("([\"']?)([0-9]+(([fF]|\\.[0-9]+)|\\.))[fF]?\\1"));
     public static final Token INTEGER = new Token("INT", Pattern.compile("([\"']?)(0[xX][0-9a-fA-F]+[iI]?|[0-9]+[iI]?)\\1"));
     public static final Token REFERENCE = new Token("REFERENCE", Pattern.compile("&[a-zA-Z][a-zA-Z0-9_.$]*"));
     public static final Token SEPARATOR = new Token("SEPARATOR", Pattern.compile(","));
@@ -87,7 +87,6 @@ public class NBOParser {
     }
 
     public NBOMap createAST() throws NBOParseException {
-
         Stack<Tokenizer.Match> matches = new Stack<>();
         for (int i = tokenMatches.size() - 1; i >= 0; i--) {
             matches.add(tokenMatches.get(i));
@@ -102,10 +101,27 @@ public class NBOParser {
             var entry = parseDeclaration(matches);
             objects.put(entry.getKey(), entry.getValue());
         }
+//        remapObjectsWithImports(objects, imports);
         NBOMap root = new NBOMap();
         root.put(NBOFile.KEY_IMPORTS, imports);
         root.put(NBOFile.KEY_OBJECTS, objects);
         return root;
+    }
+
+    private void remapObjectsWithImports(NBOMap objects, NBOMap imports) {
+        for (Map.Entry<String, NBOTree> entry : objects.entrySet()) {
+            String key = entry.getKey();
+            Object value = entry.getValue();
+            if (value instanceof NBOObject nboObject) {
+                NBOString aliasedType = (NBOString) imports.get(nboObject.getType());
+                if (aliasedType != null) {
+                    nboObject.setType(aliasedType.getValueRaw());
+                }
+            } else if (value instanceof NBOMap subMap) {
+                remapObjectsWithImports(subMap, imports);
+                objects.put(key, subMap);
+            }
+        }
     }
 
     private Map.Entry<String, NBOString> parseImport(Stack<Tokenizer.Match> tokens) throws NBOParseException {

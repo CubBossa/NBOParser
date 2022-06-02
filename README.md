@@ -41,7 +41,7 @@ Here you can see YML and NBO in comparison for object (de-)serialisation:
 <tr>
 <td>
 
-```
+```yml
 other_effect:
     ==: SoundPlayer
     volume: 1.0
@@ -96,4 +96,30 @@ effect_player := EffectPlayer{
 </td>
 </table>
 
+## Usage
 
+To make use of this file format in your code, you must first register any classes 
+that are used in your NBOFile with the NBOSerializer. After that, you can load
+your NBOFile and retrieve the values that you need. You can also take a look at the
+test cases, where this example originates from and where you can also see the
+(de-)serialization methods for this example class as well as the corresponding source nbo
+file (`vector_test.nbo`).
+```java
+// registration must be done for every class that you want to deserialize once before first usage
+NBOSerializer.register(
+        Vecto3f.class,
+        Vector3f::deserialize,  // Function<Map<String, ?>, T>
+        Vector3f::serialize     // Function<T, Map<String, Object>>
+);
+NBOSerializer.register(
+        Matrix3f.class,
+        Matrix3f::deserialize,
+        Matrix3f::serialize
+);
+
+File file = /*...*/; // load your file
+NBOFile nbo = NBOFile.loadFile(file);
+
+Vector3f vector = nbo.get("vec"); // note that this might throw in a class cast exception
+Matrix3f matrix = nbo.get("matrix");
+```
