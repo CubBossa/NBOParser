@@ -107,7 +107,7 @@ file (`vector_test.nbo`).
 ```java
 // registration must be done for every class that you want to deserialize once before first usage
 NBOSerializer.register(
-        Vecto3f.class,
+        Vector3f.class,
         Vector3f::deserialize,  // Function<Map<String, ?>, T>
         Vector3f::serialize     // Function<T, Map<String, Object>>
 );
