@@ -22,7 +22,11 @@ public class NBOParser {
     public static final Token NULL = new Token("NULL", Pattern.compile("(?i)null"));
     public static final Token KEY = new Token("KEY", Pattern.compile("[a-zA-Z][a-zA-Z0-9_.$]*"));
     public static final Token BOOLEAN = new Token("BOOLEAN", Pattern.compile("([\"']?)((true|false)|([10][bB]))\\1"));
+    public static final Token BYTE = new Token("BOOLEAN", Pattern.compile("([\"']?)[0-9]+[bB]\\1"));
     public static final Token FLOAT = new Token("FLOAT", Pattern.compile("([\"']?)([0-9]+(([fF]|\\.[0-9]+)|\\.))[fF]?\\1"));
+    public static final Token DOUBLE = new Token("DOUBLE", Pattern.compile("([\"']?)([0-9]+(([fF]|\\.[0-9]+)|\\.))[dD]\\1"));
+    public static final Token SHORT = new Token("SHORT", Pattern.compile("([\"']?)(0[xX][0-9a-fA-F]+[sS]|[0-9]+[sS])\\1"));
+    public static final Token LONG = new Token("LONG", Pattern.compile("([\"']?)(0[xX][0-9a-fA-F]+[lL]|[0-9]+[lL])\\1"));
     public static final Token INTEGER = new Token("INT", Pattern.compile("([\"']?)(0[xX][0-9a-fA-F]+[iI]?|[0-9]+[iI]?)\\1"));
     public static final Token REFERENCE = new Token("REFERENCE", Pattern.compile("&[a-zA-Z][a-zA-Z0-9_.$]*"));
     public static final Token SEPARATOR = new Token("SEPARATOR", Pattern.compile(","));
@@ -57,7 +61,11 @@ public class NBOParser {
 
         tokenizer.addToken(NULL);
         tokenizer.addToken(BOOLEAN);
+        tokenizer.addToken(BYTE);
+        tokenizer.addToken(DOUBLE);
         tokenizer.addToken(FLOAT);
+        tokenizer.addToken(LONG);
+        tokenizer.addToken(SHORT);
         tokenizer.addToken(INTEGER);
         tokenizer.addToken(KEY);
         tokenizer.addToken(REFERENCE);
@@ -233,6 +241,7 @@ public class NBOParser {
         }
         Token t = tokens.peek().token();
         if (t.equals(NULL)) {
+            tokens.pop();
             return new NBONull();
         } else if (t.equals(KEY)) {
             return parseObject(tokens);
@@ -240,8 +249,16 @@ public class NBOParser {
             return new NBOString(tokens.pop().string());
         } else if (t.equals(BOOLEAN)) {
             return new NBOBool(tokens.pop().string());
+        } else if (t.equals(BYTE)) {
+            return new NBOByte(tokens.pop().string());
+        } else if (t.equals(DOUBLE)) {
+            return new NBODouble(tokens.pop().string());
         } else if (t.equals(FLOAT)) {
             return new NBOFloat(tokens.pop().string());
+        } else if (t.equals(SHORT)) {
+            return new NBOShort(tokens.pop().string());
+        } else if (t.equals(LONG)) {
+            return new NBOLong(tokens.pop().string());
         } else if (t.equals(INTEGER)) {
             return new NBOInteger(tokens.pop().string());
         } else if (t.equals(REFERENCE)) {

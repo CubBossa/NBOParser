@@ -21,38 +21,6 @@ public class NBOSerializer {
 
     private final Map<Class<?>, Serializer> serializers = new HashMap<>();
 
-
-    public Map<String, Object> convertAstToMap(NBOMap input) throws ClassNotFoundException {
-        return (Map<String, Object>) convertAstToObject(input);
-    }
-
-    public Object convertAstToObject(NBOTree input) throws ClassNotFoundException {
-        if (input instanceof NBOObject object) {
-            return deserialize(object);
-        } else if (input instanceof NBOMap map) {
-            return new LinkedHashMap<>(map.entrySet().stream().map(e -> {
-                try {
-                    return new AbstractMap.SimpleEntry<>(e.getKey(), convertAstToObject(e.getValue()));
-                } catch (ClassNotFoundException ex) {
-                    ex.printStackTrace();
-                }
-                return null;
-            }).filter(Objects::nonNull).collect(Collectors.toMap(AbstractMap.SimpleEntry::getKey, AbstractMap.SimpleEntry::getValue)));
-        } else if (input instanceof NBOList list) {
-            return list.stream().map(e -> {
-                try {
-                    return convertAstToObject(e);
-                } catch (ClassNotFoundException ex) {
-                    ex.printStackTrace();
-                }
-                return null;
-            }).distinct().collect(Collectors.toCollection(ArrayList::new));
-        } else if (input instanceof NBOString string) {
-            return string.getValue();
-        }
-        return null;
-    }
-
     public NBOTree convertObjectToAst(Object input, NBOFile file) {
         if (input == null) {
             return new NBONull();
@@ -78,14 +46,20 @@ public class NBOSerializer {
 
         } else if (input instanceof String string) {
             return new NBOString(string);
+        } else if (input instanceof Short s) {
+            return new NBOShort(s);
+        } else if (input instanceof Long l) {
+            return new NBOLong(l);
         } else if (input instanceof Integer integer) {
             return new NBOInteger(integer);
         } else if (input instanceof Boolean bool) {
             return new NBOBool(bool);
+        } else if (input instanceof Byte bool) {
+            return new NBOByte(bool);
+        } else if (input instanceof Double val) {
+            return new NBODouble(val);
         } else if (input instanceof Float val) {
             return new NBOFloat(val);
-        } else if (input instanceof Double val) {
-            return new NBOFloat(val.floatValue());
         } else if (input instanceof Map) {
             Map<String, Object> map = (Map<String, Object>) input;
             var m = new NBOMap();
@@ -114,7 +88,7 @@ public class NBOSerializer {
         }
         Map<String, Object> actualValues = new HashMap<>();
         for (Map.Entry<String, NBOTree> entry : object.entrySet()) {
-            actualValues.put(entry.getKey(), deserialize(entry.getValue()));
+            actualValues.put(entry.getKey(), deserialize(entry.getValue(), context));
         }
         for (Map.Entry<String, Object> entry : actualValues.entrySet()) {
             if (entry.getValue() instanceof NBOReference reference) {
@@ -126,19 +100,47 @@ public class NBOSerializer {
         return (T) serializer.from().convert(actualValues);
     }
 
-    public <T> T deserialize(NBOTree nboTree) throws ClassNotFoundException {
-        if (nboTree instanceof NBOBool nboBool) {
+    public <T> T deserialize(NBOTree nboTree, NBOSerializationContext context) throws ClassNotFoundException {
+        if (nboTree == null || nboTree instanceof NBONull) {
+            return null;
+        } else if (nboTree instanceof NBOBool nboBool) {
             return (T) nboBool.getValueRaw();
         } else if (nboTree instanceof NBOFloat nboFloat) {
             return (T) nboFloat.getValueRaw();
+        } else if (nboTree instanceof NBODouble nboDouble) {
+            return (T) nboDouble.getValueRaw();
+        } else if (nboTree instanceof NBOByte nboByte) {
+            return (T) nboByte.getValueRaw();
+        } else if (nboTree instanceof NBOLong nboLong) {
+            return (T) nboLong.getValueRaw();
+        } else if (nboTree instanceof NBOShort nboShort) {
+            return (T) nboShort.getValueRaw();
         } else if (nboTree instanceof NBOInteger nboInteger) {
             return (T) nboInteger.getValueRaw();
         } else if (nboTree instanceof NBOString nboString) {
             return (T) nboString.getValueRaw();
-        } else if (nboTree instanceof NBOReference nboReference) {
-            return (T) nboReference;
         } else if (nboTree instanceof NBOObject nboObject) {
-            return deserialize(nboObject);
+            return deserialize(nboObject, context);
+        } else if (nboTree instanceof NBOMap map) {
+            return (T) new LinkedHashMap<>(map.entrySet().stream().map(e -> {
+                try {
+                    return new AbstractMap.SimpleEntry<>(e.getKey(), deserialize(e.getValue(), context));
+                } catch (ClassNotFoundException ex) {
+                    ex.printStackTrace();
+                }
+                return null;
+            }).filter(Objects::nonNull).collect(Collectors.toMap(AbstractMap.SimpleEntry::getKey, AbstractMap.SimpleEntry::getValue)));
+        } else if (nboTree instanceof NBOList list) {
+            return (T) list.stream().map(e -> {
+                try {
+                    return deserialize(e, context);
+                } catch (ClassNotFoundException ex) {
+                    ex.printStackTrace();
+                }
+                return null;
+            }).distinct().collect(Collectors.toCollection(ArrayList::new));
+        } else if (nboTree instanceof NBOReference nboReference) {
+            return (T) context.getReferenceObjects().get(nboReference.getReference());
         }
         throw new RuntimeException("Could not unpack NBOTree object: " + nboTree);
     }
