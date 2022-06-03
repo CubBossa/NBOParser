@@ -19,6 +19,7 @@ public class NBOParser {
     public static final Token BACKSPACE = new Token("BACKSPACE", Pattern.compile("\b"));
     public static final Token COLON = new Token("COLON", Pattern.compile(":"));
     public static final Token ASSIGN = new Token("ASSIGN", Pattern.compile(":="));
+    public static final Token NULL = new Token("NULL", Pattern.compile("(?i)null"));
     public static final Token KEY = new Token("KEY", Pattern.compile("[a-zA-Z][a-zA-Z0-9_.$]*"));
     public static final Token BOOLEAN = new Token("BOOLEAN", Pattern.compile("([\"']?)((true|false)|([10][bB]))\\1"));
     public static final Token FLOAT = new Token("FLOAT", Pattern.compile("([\"']?)([0-9]+(([fF]|\\.[0-9]+)|\\.))[fF]?\\1"));
@@ -54,6 +55,7 @@ public class NBOParser {
         tokenizer.addToken(ASSIGN);
         tokenizer.addToken(COLON);
 
+        tokenizer.addToken(NULL);
         tokenizer.addToken(BOOLEAN);
         tokenizer.addToken(FLOAT);
         tokenizer.addToken(INTEGER);
@@ -230,7 +232,9 @@ public class NBOParser {
             throw new NBOParseException("Could not parse value, no token found.", input, input.length());
         }
         Token t = tokens.peek().token();
-        if (t.equals(KEY)) {
+        if (t.equals(NULL)) {
+            return new NBONull();
+        } else if (t.equals(KEY)) {
             return parseObject(tokens);
         } else if (t.equals(QUOTE)) {
             return new NBOString(tokens.pop().string());

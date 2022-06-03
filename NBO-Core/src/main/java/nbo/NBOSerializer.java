@@ -55,7 +55,7 @@ public class NBOSerializer {
 
     public NBOTree convertObjectToAst(Object input, NBOFile file) {
         if (input == null) {
-            return new NBOString("null");
+            return new NBONull();
         }
         Serializer serializer = serializers.get(input.getClass());
         if (serializer != null) {
@@ -71,7 +71,7 @@ public class NBOSerializer {
 
             // Create import
             String alias = input.getClass().getSimpleName();
-            if (file.getImportMap().keySet().stream().noneMatch(string -> string.equals(alias))) {
+            if (file.getImportMap().entrySet().stream().noneMatch(e -> e.getKey().equals(alias) || e.getValue().equals(input.getClass()))) {
                 file.setImport(alias, input.getClass());
             }
             return object;

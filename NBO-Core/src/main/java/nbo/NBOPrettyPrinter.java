@@ -38,6 +38,7 @@ public class NBOPrettyPrinter {
 		};
 
 		this.prettyMethods = Map.of(
+				NBONull.class, tree -> "null",
 				NBOString.class, Object::toString,
 				NBOInteger.class, Object::toString,
 				NBOFloat.class, Object::toString,
