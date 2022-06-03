@@ -4,6 +4,7 @@ import nbo.NBOSerializer;
 import org.bukkit.Color;
 import org.bukkit.FireworkEffect;
 import org.bukkit.Location;
+import org.bukkit.Particle;
 import org.bukkit.attribute.AttributeModifier;
 import org.bukkit.block.banner.Pattern;
 import org.bukkit.configuration.serialization.ConfigurationSerialization;
@@ -12,6 +13,9 @@ import org.bukkit.potion.PotionEffect;
 import org.bukkit.util.BlockVector;
 import org.bukkit.util.BoundingBox;
 import org.bukkit.util.Vector;
+
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 public class NBOBukkitSerializer {
 
@@ -26,6 +30,30 @@ public class NBOBukkitSerializer {
 				.register(Pattern.class, map -> (Pattern) ConfigurationSerialization.deserializeObject(map), Pattern::serialize)
 				.register(Location.class, Location::deserialize, Location::serialize)
 				.register(AttributeModifier.class, AttributeModifier::deserialize, AttributeModifier::serialize)
-				.register(BoundingBox.class, BoundingBox::deserialize, BoundingBox::serialize);
+				.register(BoundingBox.class, BoundingBox::deserialize, BoundingBox::serialize)
+				.register(Particle.DustTransition.class, map -> {
+					return new Particle.DustTransition(
+							(Color) map.getOrDefault("color", Color.BLACK),
+							(Color) map.getOrDefault("toColor", Color.BLACK),
+							(float) map.getOrDefault("size", 1f)
+					);
+				}, dustTransition -> {
+					Map<String, Object> map = new LinkedHashMap<>();
+					map.put("color", dustTransition.getColor());
+					map.put("size", dustTransition.getSize());
+					map.put("toColor", dustTransition.getToColor());
+					return map;
+				})
+				.register(Particle.DustOptions.class, map -> {
+					return new Particle.DustOptions(
+							(Color) map.getOrDefault("color", Color.BLACK),
+							(float) map.getOrDefault("size", 1f)
+					);
+				}, dustTransition -> {
+					Map<String, Object> map = new LinkedHashMap<>();
+					map.put("color", dustTransition.getColor());
+					map.put("size", dustTransition.getSize());
+					return map;
+				});
 	}
 }
