@@ -53,20 +53,20 @@ public class NBOSerializer {
         return null;
     }
 
-    public NBOTree convertObjectToAst(Object input, NBOFile file, Collection<Object> referencedObjects) {
+    public NBOTree convertObjectToAst(Object input, NBOFile file) {
         if (input == null) {
             return new NBOString("null");
         }
         Serializer serializer = serializers.get(input.getClass());
         if (serializer != null) {
             // Only create reference
-            if (file.getObjectMap().containsValue(input) && referencedObjects.contains(input)) {
+            if (file.getObjectMap().containsValue(input)) {
                 return new NBOReference(file.getObjectMap().entrySet().stream().filter(e -> e.getValue().equals(input)).findFirst().get().getKey());
             }
             // Create actual object
             NBOObject object = new NBOObject(input.getClass().getName());
             object.putAll(serializer.to().convert(input).entrySet().stream()
-                    .map(e -> new AbstractMap.SimpleEntry<>(e.getKey(), convertObjectToAst(e.getValue(), file, referencedObjects)))
+                    .map(e -> new AbstractMap.SimpleEntry<>(e.getKey(), convertObjectToAst(e.getValue(), file)))
                     .collect(Collectors.toMap(AbstractMap.SimpleEntry::getKey, AbstractMap.SimpleEntry::getValue)));
 
             // Create import
@@ -74,9 +74,6 @@ public class NBOSerializer {
             if (file.getImportMap().keySet().stream().noneMatch(string -> string.equals(alias))) {
                 file.setImport(alias, input.getClass());
             }
-
-            // Allow to be referenced from now on
-            referencedObjects.add(input);
             return object;
 
         } else if (input instanceof String string) {
@@ -93,12 +90,12 @@ public class NBOSerializer {
             Map<String, Object> map = (Map<String, Object>) input;
             var m = new NBOMap();
             m.putAll(map.entrySet().stream()
-                    .map(e -> new AbstractMap.SimpleEntry<>(e.getKey(), convertObjectToAst(e.getValue(), file, referencedObjects)))
+                    .map(e -> new AbstractMap.SimpleEntry<>(e.getKey(), convertObjectToAst(e.getValue(), file)))
                     .collect(Collectors.toMap(AbstractMap.SimpleEntry::getKey, AbstractMap.SimpleEntry::getValue)));
             return m;
         } else if (input instanceof List<?> list) {
             var l = new NBOList();
-            l.addAll(list.stream().map(e -> convertObjectToAst(e, file, referencedObjects)).collect(Collectors.toList()));
+            l.addAll(list.stream().map(e -> convertObjectToAst(e, file)).collect(Collectors.toList()));
             return l;
         }
         throw new RuntimeException("Could not convert object to ast: " + input);

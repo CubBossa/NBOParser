@@ -77,11 +77,11 @@ public class NBOFile {
     }
 
     public void setObject(String key, Object object) {
-        objectMap.put(key, object);
         NBOMap objects = (NBOMap) root.getOrDefault(KEY_OBJECTS, new NBOMap());
         if (objects != null) {
-            objects.put(key, serializer.convertObjectToAst(object, this, new HashSet<>()));
+            objects.put(key, serializer.convertObjectToAst(object, this));
         }
+        objectMap.put(key, object);
         root.put(KEY_OBJECTS, objects);
     }
 
