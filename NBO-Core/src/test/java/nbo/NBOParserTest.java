@@ -6,6 +6,8 @@ import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.LinkedList;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -50,6 +52,14 @@ public class NBOParserTest {
 	}
 
 	private static final File TEST_FILE_VECTOR = new File("src/test/resources/vector_test.nbo");
+
+	@Test
+	void parseMapAssignment() throws NBOParseException, ClassNotFoundException {
+		NBOSerializer serializer = new NBOSerializer();
+		Map<String, Object> map = serializer.deserialize(new NBOParser().createAST("list := [0, 1, 2]"), new NBOSerializationContext());
+		Map<String, Object> objects = (Map<String, Object>) map.get(NBOFile.KEY_OBJECTS);
+		assertEquals(ArrayList.class, objects.get("list").getClass());
+	}
 
 	@Test
 	void parse() throws NBOParseException {

@@ -14,6 +14,7 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.Map;
 
 @Getter
@@ -29,8 +30,8 @@ public class NBOFile {
     private NBOMap root = new NBOMap();
 
     private NBOFile() {
-        importMap = new HashMap<>();
-        objectMap = new HashMap<>();
+        importMap = new LinkedHashMap<>();
+        objectMap = new LinkedHashMap<>();
     }
 
     public static NBOFile loadFile(File file, NBOSerializer serializer) throws IOException, NBOParseException, ClassNotFoundException {

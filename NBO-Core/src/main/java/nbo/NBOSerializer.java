@@ -86,7 +86,7 @@ public class NBOSerializer {
         if (serializer == null) {
             throw new RuntimeException("Class not registered for serialization: " + clazz.getName());
         }
-        Map<String, Object> actualValues = new HashMap<>();
+        Map<String, Object> actualValues = new LinkedHashMap<>();
         for (Map.Entry<String, NBOTree> entry : object.entrySet()) {
             actualValues.put(entry.getKey(), deserialize(entry.getValue(), context));
         }

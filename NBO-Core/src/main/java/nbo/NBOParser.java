@@ -182,7 +182,16 @@ public class NBOParser {
         if (tokens.empty() || !tokens.pop().token().equals(ASSIGN)) {
             throw new NBOParseException("A declaration must be of format [name] := [type]{[data...]}.", input, tokens.empty() ? input.length() : tokens.peek().startIndex());
         }
-        return new AbstractMap.SimpleEntry<>(object.string(), parseObject(tokens));
+        Token next = tokens.peek().token();
+        NBOTree value = null;
+        if (next.equals(BRACKET_OPEN)) {
+            value = parseBlock(tokens);
+        } else if (next.equals(LIST_OPEN)) {
+            value = parseList(tokens);
+        } else if (next.equals(KEY)) {
+            value = parseObject(tokens);
+        }
+        return new AbstractMap.SimpleEntry<>(object.string(), value);
     }
 
     private NBOObject parseObject(Stack<Tokenizer.Match> tokens) throws NBOParseException {
