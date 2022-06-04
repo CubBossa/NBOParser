@@ -1,13 +1,13 @@
 package nbo;
 
 import nbo.tree.NBOMap;
-import nbo.tree.NBOObject;
+import nbo.tree.NBOTree;
 import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.LinkedList;
+import java.util.HashMap;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -55,10 +55,18 @@ public class NBOParserTest {
 
 	@Test
 	void parseMapAssignment() throws NBOParseException, ClassNotFoundException {
-		NBOSerializer serializer = new NBOSerializer();
-		Map<String, Object> map = serializer.deserialize(new NBOParser().createAST("list := [0, 1, 2]"), new NBOSerializationContext());
+		NBOSerializer serializer = NBOFile.DEFAULT_SERIALIZER;
+		Map<String, Object> map = serializer.deserialize((NBOTree) new NBOParser().createAST("list := [0, 1, 2]"), new NBOSerializationContext());
 		Map<String, Object> objects = (Map<String, Object>) map.get(NBOFile.KEY_OBJECTS);
 		assertEquals(ArrayList.class, objects.get("list").getClass());
+	}
+
+	@Test
+	void parseHashSet() throws NBOParseException, ClassNotFoundException {
+		NBOSerializer serializer = NBOFile.DEFAULT_SERIALIZER;
+		Map<String, Object> map = serializer.deserialize((NBOTree) new NBOParser().createAST("list := java.util.HashMap {a: 'b', c: 'd'}"), new NBOSerializationContext());
+		Map<String, Object> objects = (Map<String, Object>) map.get(NBOFile.KEY_OBJECTS);
+		assertEquals(HashMap.class, objects.get("list").getClass());
 	}
 
 	@Test
@@ -79,17 +87,17 @@ public class NBOParserTest {
 
 		assertEquals("nbo.NBOParserTest$Vector3f", imports.get("Vec").getValueRaw());
 		assertEquals("nbo.NBOParserTest$Matrix3f", imports.get("Mat").getValueRaw());
-		assertEquals(NBOObject.class, objects.get("unit_1").getClass());
+		assertEquals(NBOMap.class, objects.get("unit_1").getClass());
 	}
 
 	@Test
 	public void writeToFile() throws NBOParseException, ClassNotFoundException {
-		NBOSerializer serializer = new NBOSerializer()
-				.register(
+		NBOSerializer serializer = NBOFile.DEFAULT_SERIALIZER
+				.registerMapSerializer(
 						Vector3f.class,
 						Vector3f::deserialize,
 						Vector3f::serialize
-				).register(
+				).registerMapSerializer(
 						Matrix3f.class,
 						Matrix3f::deserialize,
 						Matrix3f::serialize
@@ -119,12 +127,12 @@ public class NBOParserTest {
 
 	@Test
 	public void readFromFile() throws IOException, NBOParseException, ClassNotFoundException {
-		NBOSerializer serializer = new NBOSerializer()
-				.register(
+		NBOSerializer serializer = NBOFile.DEFAULT_SERIALIZER
+				.registerMapSerializer(
 						Vector3f.class,
 						Vector3f::deserialize,
 						Vector3f::serialize
-				).register(
+				).registerMapSerializer(
 						Matrix3f.class,
 						Matrix3f::deserialize,
 						Matrix3f::serialize

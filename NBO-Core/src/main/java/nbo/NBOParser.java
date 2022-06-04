@@ -111,27 +111,10 @@ public class NBOParser {
             var entry = parseDeclaration(matches);
             objects.put(entry.getKey(), entry.getValue());
         }
-//        remapObjectsWithImports(objects, imports);
         NBOMap root = new NBOMap();
         root.put(NBOFile.KEY_IMPORTS, imports);
         root.put(NBOFile.KEY_OBJECTS, objects);
         return root;
-    }
-
-    private void remapObjectsWithImports(NBOMap objects, NBOMap imports) {
-        for (Map.Entry<String, NBOTree> entry : objects.entrySet()) {
-            String key = entry.getKey();
-            Object value = entry.getValue();
-            if (value instanceof NBOObject nboObject) {
-                NBOString aliasedType = (NBOString) imports.get(nboObject.getType());
-                if (aliasedType != null) {
-                    nboObject.setType(aliasedType.getValueRaw());
-                }
-            } else if (value instanceof NBOMap subMap) {
-                remapObjectsWithImports(subMap, imports);
-                objects.put(key, subMap);
-            }
-        }
     }
 
     private Map.Entry<String, NBOString> parseImport(Stack<Tokenizer.Match> tokens) throws NBOParseException {
@@ -182,28 +165,41 @@ public class NBOParser {
         if (tokens.empty() || !tokens.pop().token().equals(ASSIGN)) {
             throw new NBOParseException("A declaration must be of format [name] := [type]{[data...]}.", input, tokens.empty() ? input.length() : tokens.peek().startIndex());
         }
-        Token next = tokens.peek().token();
-        NBOTree value = null;
-        if (next.equals(BRACKET_OPEN)) {
-            value = parseBlock(tokens);
-        } else if (next.equals(LIST_OPEN)) {
-            value = parseList(tokens);
-        } else if (next.equals(KEY)) {
-            value = parseObject(tokens);
-        }
-        return new AbstractMap.SimpleEntry<>(object.string(), value);
+        return new AbstractMap.SimpleEntry<>(object.string(), parseGroup(tokens));
     }
 
-    private NBOObject parseObject(Stack<Tokenizer.Match> tokens) throws NBOParseException {
-        if (tokens.empty() || !tokens.peek().token().equals(KEY)) {
-            throw new NBOParseException("An object segment must start with a type specification [type]{[data...]}", input, tokens.empty() ? input.length() : tokens.peek().startIndex());
+    private NBOTree parseGroup(Stack<Tokenizer.Match> tokens) throws NBOParseException {
+        if (tokens.empty()) {
+            throw new NBOParseException("Missing object assignment.", input, tokens.empty() ? 0 : tokens.peek().startIndex());
         }
-        NBOObject obj = new NBOObject(tokens.pop().string());
-        obj.putAll(parseBlock(tokens));
-        return obj;
+        String type = null;
+        if (tokens.peek().token().equals(KEY)) {
+            type = tokens.pop().string();
+        }
+        Token open = tokens.peek().token();
+        if (open.equals(BRACKET_OPEN)) {
+            return parseMap(tokens, type);
+        } else if (open.equals(LIST_OPEN)) {
+            return parseList(tokens, type);
+        }
+        throw new NBOParseException("Declarations must be followed by a list [...] or a map {...}.", input, tokens.peek().startIndex());
     }
 
-    private NBOMap parseBlock(Stack<Tokenizer.Match> tokens) throws NBOParseException {
+    private NBOMap parseMap(Stack<Tokenizer.Match> tokens, String type) throws NBOParseException {
+        NBOMap map = new NBOMap();
+        map.setType(type);
+        map.putAll(parseMapBlock(tokens));
+        return map;
+    }
+
+    private NBOList parseList(Stack<Tokenizer.Match> tokens, String type) throws NBOParseException {
+        NBOList list = new NBOList();
+        list.setType(type);
+        list.addAll(parseListBlock(tokens));
+        return list;
+    }
+
+    private NBOMap parseMapBlock(Stack<Tokenizer.Match> tokens) throws NBOParseException {
         if (tokens.empty() || !tokens.peek().token().equals(BRACKET_OPEN)) {
             throw new NBOParseException("A block must be surrounded with '{' and '}'.", input, tokens.empty() ? input.length() : tokens.peek().startIndex());
         }
@@ -233,54 +229,7 @@ public class NBOParser {
         return tree;
     }
 
-    private Map.Entry<String, NBOTree> parseEntry(Stack<Tokenizer.Match> tokens) throws NBOParseException {
-        if (tokens.empty() || !tokens.peek().token().equals(KEY)) {
-            throw new NBOParseException("An entry segment must start with a key.", input, tokens.empty() ? input.length() : tokens.peek().startIndex());
-        }
-        Tokenizer.Match key = tokens.pop();
-        if (tokens.empty() || !tokens.pop().token().equals(COLON)) {
-            throw new NBOParseException("An entry segment must be defined with a colon.", input, tokens.empty() ? input.length() : tokens.peek().startIndex());
-        }
-        return new AbstractMap.SimpleEntry<>(key.string(), parseValue(tokens));
-    }
-
-    private NBOTree parseValue(Stack<Tokenizer.Match> tokens) throws NBOParseException {
-        if (tokens.empty()) {
-            throw new NBOParseException("Could not parse value, no token found.", input, input.length());
-        }
-        Token t = tokens.peek().token();
-        if (t.equals(NULL)) {
-            tokens.pop();
-            return new NBONull();
-        } else if (t.equals(KEY)) {
-            return parseObject(tokens);
-        } else if (t.equals(QUOTE)) {
-            return new NBOString(tokens.pop().string());
-        } else if (t.equals(BOOLEAN)) {
-            return new NBOBool(tokens.pop().string());
-        } else if (t.equals(BYTE)) {
-            return new NBOByte(tokens.pop().string());
-        } else if (t.equals(DOUBLE)) {
-            return new NBODouble(tokens.pop().string());
-        } else if (t.equals(FLOAT)) {
-            return new NBOFloat(tokens.pop().string());
-        } else if (t.equals(SHORT)) {
-            return new NBOShort(tokens.pop().string());
-        } else if (t.equals(LONG)) {
-            return new NBOLong(tokens.pop().string());
-        } else if (t.equals(INTEGER)) {
-            return new NBOInteger(tokens.pop().string());
-        } else if (t.equals(REFERENCE)) {
-            return new NBOReference(tokens.pop().string().substring(1));
-        } else if (t.equals(BRACKET_OPEN)) {
-            return parseBlock(tokens);
-        } else if (t.equals(LIST_OPEN)) {
-            return parseList(tokens);
-        }
-        throw new NBOParseException("The specified value '" + tokens.peek().string() + "' is of no known type.", input, tokens.peek().startIndex());
-    }
-
-    private NBOTree parseList(Stack<Tokenizer.Match> tokens) throws NBOParseException {
+    private NBOList parseListBlock(Stack<Tokenizer.Match> tokens) throws NBOParseException {
         if (tokens.empty() || !tokens.peek().token().equals(LIST_OPEN)) {
             throw new NBOParseException("List segments must be opened with a '['.", input, tokens.empty() ? input.length() : tokens.peek().startIndex());
         }
@@ -307,5 +256,48 @@ public class NBOParser {
         }
         tokens.pop();
         return tree;
+    }
+
+    private Map.Entry<String, NBOTree> parseEntry(Stack<Tokenizer.Match> tokens) throws NBOParseException {
+        if (tokens.empty() || !tokens.peek().token().equals(KEY)) {
+            throw new NBOParseException("An entry segment must start with a key.", input, tokens.empty() ? input.length() : tokens.peek().startIndex());
+        }
+        Tokenizer.Match key = tokens.pop();
+        if (tokens.empty() || !tokens.pop().token().equals(COLON)) {
+            throw new NBOParseException("An entry segment must be defined with a colon.", input, tokens.empty() ? input.length() : tokens.peek().startIndex());
+        }
+        return new AbstractMap.SimpleEntry<>(key.string(), parseValue(tokens));
+    }
+
+    private NBOTree parseValue(Stack<Tokenizer.Match> tokens) throws NBOParseException {
+        if (tokens.empty()) {
+            throw new NBOParseException("Could not parse value, no token found.", input, input.length());
+        }
+        Token t = tokens.peek().token();
+        if (t.equals(NULL)) {
+            tokens.pop();
+            return new NBONull();
+        } else if (t.equals(KEY) || t.equals(BRACKET_OPEN) || t.equals(LIST_OPEN)) {
+            return parseGroup(tokens);
+        } else if (t.equals(QUOTE)) {
+            return new NBOString(tokens.pop().string());
+        } else if (t.equals(BOOLEAN)) {
+            return new NBOBool(tokens.pop().string());
+        } else if (t.equals(BYTE)) {
+            return new NBOByte(tokens.pop().string());
+        } else if (t.equals(DOUBLE)) {
+            return new NBODouble(tokens.pop().string());
+        } else if (t.equals(FLOAT)) {
+            return new NBOFloat(tokens.pop().string());
+        } else if (t.equals(SHORT)) {
+            return new NBOShort(tokens.pop().string());
+        } else if (t.equals(LONG)) {
+            return new NBOLong(tokens.pop().string());
+        } else if (t.equals(INTEGER)) {
+            return new NBOInteger(tokens.pop().string());
+        } else if (t.equals(REFERENCE)) {
+            return new NBOReference(tokens.pop().string().substring(1));
+        }
+        throw new NBOParseException("The specified value '" + tokens.peek().string() + "' is of no known type.", input, tokens.peek().startIndex());
     }
 }

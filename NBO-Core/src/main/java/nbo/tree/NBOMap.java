@@ -1,10 +1,23 @@
 package nbo.tree;
 
-import java.util.*;
+import lombok.Getter;
+import lombok.Setter;
 
-public class NBOMap extends LinkedHashMap<String, NBOTree> implements NBOTree {
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
 
-    @Override public String toString() {
+@Getter
+@Setter
+public class NBOMap extends LinkedHashMap<String, NBOTree> implements NBOTree, NBOTyped {
+
+    /**
+     * If null, LinkedHashMap is used.
+     */
+    private String type = null;
+
+    @Override
+    public String toString() {
         return super.toString();
     }
 

@@ -3,7 +3,6 @@ package nbo;
 import lombok.Getter;
 import lombok.Setter;
 import nbo.tree.NBOMap;
-import nbo.tree.NBOObject;
 import nbo.tree.NBOString;
 import nbo.tree.NBOTree;
 
@@ -12,14 +11,44 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.LinkedHashMap;
-import java.util.Map;
+import java.util.*;
 
 @Getter
 @Setter
 public class NBOFile {
+
+    public static final NBOSerializer DEFAULT_SERIALIZER = new NBOSerializer()
+            .registerListSerializer(HashSet.class, HashSet::new, ArrayList::new)
+            .registerListSerializer(Stack.class, objects -> {
+                var stack = new Stack<>();
+                stack.addAll(objects);
+                return stack;
+            }, ArrayList::new)
+            .registerListSerializer(LinkedList.class, LinkedList::new, ArrayList::new)
+            .registerListSerializer(Vector.class, objects -> {
+                var vector = new Vector<>();
+                vector.addAll(objects);
+                return vector;
+            }, ArrayList::new)
+            .registerMapSerializer(HashMap.class, HashMap::new, hashMap -> {
+                var map = new LinkedHashMap<String, Object>();
+                map.putAll(hashMap);
+                return map;
+            })
+            .registerMapSerializer(Hashtable.class, Hashtable::new, hashtable -> {
+                var map = new LinkedHashMap<String, Object>();
+                map.putAll(hashtable);
+                return map;
+            })
+            .registerMapSerializer(Properties.class, map -> {
+                var properties = new Properties();
+                properties.putAll(map);
+                return properties;
+            }, properties -> {
+                var map = new LinkedHashMap<String, Object>();
+                properties.forEach((key, value) -> map.put((String) key, value));
+                return map;
+            });
 
     public static final String KEY_IMPORTS = "imports";
     public static final String KEY_OBJECTS = "objects";
@@ -57,8 +86,7 @@ public class NBOFile {
         imports.forEach((s, nboTree) -> context.getClassImports().put(s, ((NBOString) nboTree).getValueRaw()));
 
         for (var entry : objects.entrySet()) {
-            NBOObject object = (NBOObject) entry.getValue();
-            Object deserialized = serializer.deserialize(object, context);
+            Object deserialized = serializer.deserialize(entry.getValue(), context);
             file.objectMap.put(entry.getKey(), deserialized);
             context.getReferenceObjects().put(entry.getKey(), deserialized);
         }

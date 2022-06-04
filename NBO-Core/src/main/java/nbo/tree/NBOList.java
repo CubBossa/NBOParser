@@ -1,10 +1,20 @@
 package nbo.tree;
 
+import lombok.Getter;
+import lombok.Setter;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
-public class NBOList extends ArrayList<NBOTree> implements NBOTree {
+@Getter
+@Setter
+public class NBOList extends ArrayList<NBOTree> implements NBOTree, NBOTyped {
+
+    /**
+     * If null, ArrayList is used.
+     */
+    private String type = null;
 
     @Override
     public Object getValue() {

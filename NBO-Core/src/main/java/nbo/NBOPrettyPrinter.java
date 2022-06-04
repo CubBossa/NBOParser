@@ -19,7 +19,7 @@ public class NBOPrettyPrinter {
 	private int maxInlineLength = 70;
 	private String indent = "    ";
 	private String lineBreak = "\n";
-	private final Map<Class<?>, Function<NBOTree, String>> prettyMethods;
+	private final Map<Class<? extends NBOTree>, Function<NBOTree, String>> prettyMethods;
 
 	public NBOPrettyPrinter() {
 		this(new NBOMap());
@@ -37,27 +37,32 @@ public class NBOPrettyPrinter {
 					"{" + String.join(", ", inner) + "}";
 		};
 
-		this.prettyMethods = Map.of(
-				NBONull.class, tree -> "null",
-				NBOString.class, Object::toString,
-				NBOInteger.class, Object::toString,
-				NBOFloat.class, Object::toString,
-				NBOBool.class, Object::toString,
-				NBOReference.class, Object::toString,
-				NBOObject.class, tree -> {
-					String type = ((NBOObject) tree).getType();
+		this.prettyMethods = new LinkedHashMapBuilder<Class<? extends NBOTree>, Function<NBOTree, String>>()
+				.put(NBONull.class, tree -> "null")
+				.put(NBOString.class, Object::toString)
+				.put(NBOInteger.class, Object::toString)
+				.put(NBOFloat.class, Object::toString)
+				.put(NBODouble.class, Object::toString)
+				.put(NBOBool.class, Object::toString)
+				.put(NBOByte.class, Object::toString)
+				.put(NBOShort.class, Object::toString)
+				.put(NBOInteger.class, Object::toString)
+				.put(NBOLong.class, Object::toString)
+				.put(NBOReference.class, Object::toString)
+				.put(NBOMap.class, tree -> {
+					String type = ((NBOMap) tree).getType();
 					String alias = imports.entrySet().stream().filter(e -> e.getValue().getValueRaw().equals(type)).map(Map.Entry::getKey).findFirst().orElse(null);
 					return (alias == null ? type : alias) + " " + mapString.apply((NBOMap) tree);
-				},
-				NBOMap.class, tree -> mapString.apply((NBOMap) tree),
-				NBOList.class, tree -> {
+				})
+				.put(NBOList.class, tree -> {
 					NBOList list = (NBOList) tree;
+					String type = list.getType();
+					String alias = imports.entrySet().stream().filter(e -> e.getValue().getValueRaw().equals(type)).map(Map.Entry::getKey).findFirst().orElse(null);
 					List<String> inner = list.stream().map(t -> format(t).replace(lineBreak, lineBreak + indent)).collect(Collectors.toList());
-					return list.size() > listInlineLength || inner.stream().anyMatch(s -> s.contains("\n")) ?
+					return (alias != null ? alias + " " : "") + (list.size() > listInlineLength || inner.stream().anyMatch(s -> s.contains("\n")) ?
 							"[" + lineBreak + indent + inner.stream().collect(Collectors.joining("," + lineBreak + indent)) + lineBreak + "]" :
-							"[" + String.join(", ", inner) + "]";
-				}
-		);
+							"[" + String.join(", ", inner) + "]");
+				}).build();
 	}
 
 	public String format(NBOTree tree) {

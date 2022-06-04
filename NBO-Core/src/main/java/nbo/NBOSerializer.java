@@ -8,32 +8,36 @@ import java.util.stream.Collectors;
 
 public class NBOSerializer {
 
-    public interface ConvertTo {
-        Map<String, Object> convert(Object o);
+    public interface ConvertTo<T> {
+        T convert(Object o);
     }
 
-    public interface ConvertFrom {
-        Object convert(Map<String, Object> map);
+    public interface ConvertFrom<T> {
+        Object convert(T map);
     }
 
-    public record Serializer(Class<?> clazz, ConvertFrom from, ConvertTo to) {
+    public record Serializer<T>(Class<?> clazz, ConvertFrom<T> from, ConvertTo<T> to) {
     }
 
-    private final Map<Class<?>, Serializer> serializers = new HashMap<>();
+    private final Map<Class<?>, Serializer<Collection<Object>>> listSerializers = new HashMap<>();
+    private final Map<Class<?>, Serializer<Map<String, Object>>> objectSerializers = new HashMap<>();
 
     public NBOTree convertObjectToAst(Object input, NBOFile file) {
         if (input == null) {
             return new NBONull();
         }
-        Serializer serializer = serializers.get(input.getClass());
-        if (serializer != null) {
+
+        // Handle map based objects
+        Serializer<Map<String, Object>> mapSerializer = objectSerializers.get(input.getClass());
+        if (mapSerializer != null) {
             // Only create reference
             if (file.getObjectMap().containsValue(input)) {
                 return new NBOReference(file.getObjectMap().entrySet().stream().filter(e -> e.getValue().equals(input)).findFirst().get().getKey());
             }
             // Create actual object
-            NBOObject object = new NBOObject(input.getClass().getName());
-            object.putAll(serializer.to().convert(input).entrySet().stream()
+            NBOMap map = new NBOMap();
+            map.setType(input.getClass().getName());
+            map.putAll(mapSerializer.to().convert(input).entrySet().stream()
                     .map(e -> new AbstractMap.SimpleEntry<>(e.getKey(), convertObjectToAst(e.getValue(), file)))
                     .collect(Collectors.toMap(AbstractMap.SimpleEntry::getKey, AbstractMap.SimpleEntry::getValue)));
 
@@ -42,9 +46,32 @@ public class NBOSerializer {
             if (file.getImportMap().entrySet().stream().noneMatch(e -> e.getKey().equals(alias) || e.getValue().equals(input.getClass()))) {
                 file.setImport(alias, input.getClass());
             }
-            return object;
+            return map;
+        }
 
-        } else if (input instanceof String string) {
+        // Handle list based objects
+        Serializer<Collection<Object>> listSerializer = listSerializers.get(input.getClass());
+        if (listSerializer != null) {
+            // Only create reference
+            if (file.getObjectMap().containsValue(input)) {
+                return new NBOReference(file.getObjectMap().entrySet().stream().filter(e -> e.getValue().equals(input)).findFirst().get().getKey());
+            }
+            // Create actual object
+            NBOList list = new NBOList();
+            list.setType(input.getClass().getName());
+            list.addAll(listSerializer.to().convert(input).stream()
+                    .map(e -> convertObjectToAst(e, file))
+                    .collect(Collectors.toList()));
+
+            // Create import
+            String alias = input.getClass().getSimpleName();
+            if (file.getImportMap().entrySet().stream().noneMatch(e -> e.getKey().equals(alias) || e.getValue().equals(input.getClass()))) {
+                file.setImport(alias, input.getClass());
+            }
+            return list;
+        }
+
+        if (input instanceof String string) {
             return new NBOString(string);
         } else if (input instanceof Short s) {
             return new NBOShort(s);
@@ -60,44 +87,23 @@ public class NBOSerializer {
             return new NBODouble(val);
         } else if (input instanceof Float val) {
             return new NBOFloat(val);
-        } else if (input instanceof Map) {
+        } else if (input instanceof LinkedHashMap) {
             Map<String, Object> map = (Map<String, Object>) input;
             var m = new NBOMap();
             m.putAll(map.entrySet().stream()
                     .map(e -> new AbstractMap.SimpleEntry<>(e.getKey(), convertObjectToAst(e.getValue(), file)))
                     .collect(Collectors.toMap(AbstractMap.SimpleEntry::getKey, AbstractMap.SimpleEntry::getValue)));
             return m;
-        } else if (input instanceof List<?> list) {
+        } else if (input instanceof ArrayList<?> list) {
             var l = new NBOList();
             l.addAll(list.stream().map(e -> convertObjectToAst(e, file)).collect(Collectors.toList()));
             return l;
         }
-        throw new RuntimeException("Could not convert object to ast: " + input);
+        return convertObjectToAst(serialize(input), file);
     }
 
     public <T> T deserialize(String objectString) throws ClassNotFoundException {
         return null; //TODO
-    }
-
-    public <T> T deserialize(NBOObject object, NBOSerializationContext context) throws ClassNotFoundException {
-        String className = context.getClassImports().getOrDefault(object.getType(), object.getType());
-        Class<?> clazz = Class.forName(className);
-        Serializer serializer = serializers.get(clazz);
-        if (serializer == null) {
-            throw new RuntimeException("Class not registered for serialization: " + clazz.getName());
-        }
-        Map<String, Object> actualValues = new LinkedHashMap<>();
-        for (Map.Entry<String, NBOTree> entry : object.entrySet()) {
-            actualValues.put(entry.getKey(), deserialize(entry.getValue(), context));
-        }
-        for (Map.Entry<String, Object> entry : actualValues.entrySet()) {
-            if (entry.getValue() instanceof NBOReference reference) {
-                String referenceName = reference.getValueRaw();
-                Object actualValue = context.getReferenceObjects().get(referenceName);
-                entry.setValue(actualValue);
-            }
-        }
-        return (T) serializer.from().convert(actualValues);
     }
 
     public <T> T deserialize(NBOTree nboTree, NBOSerializationContext context) throws ClassNotFoundException {
@@ -119,51 +125,94 @@ public class NBOSerializer {
             return (T) nboInteger.getValueRaw();
         } else if (nboTree instanceof NBOString nboString) {
             return (T) nboString.getValueRaw();
-        } else if (nboTree instanceof NBOObject nboObject) {
-            return deserialize(nboObject, context);
-        } else if (nboTree instanceof NBOMap map) {
-            return (T) new LinkedHashMap<>(map.entrySet().stream().map(e -> {
-                try {
-                    return new AbstractMap.SimpleEntry<>(e.getKey(), deserialize(e.getValue(), context));
-                } catch (ClassNotFoundException ex) {
-                    ex.printStackTrace();
-                }
-                return null;
-            }).filter(Objects::nonNull).collect(Collectors.toMap(AbstractMap.SimpleEntry::getKey, AbstractMap.SimpleEntry::getValue)));
-        } else if (nboTree instanceof NBOList list) {
-            return (T) list.stream().map(e -> {
-                try {
-                    return deserialize(e, context);
-                } catch (ClassNotFoundException ex) {
-                    ex.printStackTrace();
-                }
-                return null;
-            }).distinct().collect(Collectors.toCollection(ArrayList::new));
         } else if (nboTree instanceof NBOReference nboReference) {
             return (T) context.getReferenceObjects().get(nboReference.getReference());
+        } else if (nboTree instanceof NBOTyped typed) {
+            return deserialize(typed, context);
         }
         throw new RuntimeException("Could not unpack NBOTree object: " + nboTree);
     }
 
-    public <T> NBOSerializer register(Class<T> serializable, Function<Map<String, Object>, T> to, Function<T, Map<String, Object>> from) {
-        serializers.put(serializable, new Serializer(serializable, to::apply, o -> from.apply((T) o)));
+    public <T> T deserialize(NBOTyped object, NBOSerializationContext context) throws ClassNotFoundException {
+        String className = context.getClassImports().getOrDefault(object.getType(), object.getType());
+        Class<?> clazz = className == null ? null : Class.forName(className);
+
+        if (object instanceof NBOMap map) {
+            Map<String, Object> actualValues = new LinkedHashMap<>();
+            for (Map.Entry<String, NBOTree> entry : map.entrySet()) {
+                actualValues.put(entry.getKey(), deserialize(entry.getValue(), context));
+            }
+            for (Map.Entry<String, Object> entry : actualValues.entrySet()) {
+                if (entry.getValue() instanceof NBOReference reference) {
+                    String referenceName = reference.getValueRaw();
+                    Object actualValue = context.getReferenceObjects().get(referenceName);
+                    entry.setValue(actualValue);
+                }
+            }
+            if (clazz != null) {
+                Serializer<Map<String, Object>> serializer = objectSerializers.get(clazz);
+                if (serializer == null) {
+                    throw new RuntimeException("Class not registered for serialization: " + clazz.getName());
+                }
+                return (T) serializer.from().convert(actualValues);
+            } else {
+                return (T) new LinkedHashMap<>(actualValues);
+            }
+
+        } else if (object instanceof NBOList list) {
+            ArrayList<Object> actualValues = new ArrayList<>();
+            for (NBOTree entry : list) {
+                actualValues.add(deserialize(entry, context));
+            }
+            for (int i = 0; i < actualValues.size(); i++) {
+                Object entry = actualValues.get(i);
+                if (entry instanceof NBOReference reference) {
+                    String referenceName = reference.getValueRaw();
+                    Object actualValue = context.getReferenceObjects().get(referenceName);
+                    actualValues.set(i, actualValue);
+                }
+            }
+            if (clazz != null) {
+                Serializer<Collection<Object>> serializer = listSerializers.get(clazz);
+                if (serializer == null) {
+                    throw new RuntimeException("Class not registered for serialization: " + clazz.getName());
+                }
+                return (T) serializer.from().convert(actualValues);
+            } else {
+                return (T) new ArrayList<>(actualValues);
+            }
+        }
+        throw new IllegalArgumentException("The provided NBOTyped is neither a List nor a Map.");
+    }
+
+    public <T> T serialize(Object object) {
+        if (object instanceof NBOSerializable serializable) {
+            return (T) serializable.serialize();
+        }
+        Serializer<Map<String, Object>> serializer = objectSerializers.get(object.getClass());
+        if (serializer != null) {
+            return (T) serializer.to().convert(object);
+        }
+        Serializer<Collection<Object>> listSerializer = listSerializers.get(object.getClass());
+        if (listSerializer != null) {
+            return (T) listSerializer.to().convert(object);
+        }
+        throw new IllegalArgumentException("Input object " + object.getClass() + " must either be registered as Serializable or implement NBOSerializable interface.");
+    }
+
+    public <T> NBOSerializer registerMapSerializer(Class<T> serializable, Function<Map<String, Object>, T> to, Function<T, Map<String, Object>> from) {
+        objectSerializers.put(serializable, new Serializer<>(serializable, to::apply, o -> from.apply((T) o)));
+        return this;
+    }
+
+    public <T> NBOSerializer registerListSerializer(Class<T> serializable, Function<Collection<Object>, T> to, Function<T, List<Object>> from) {
+        listSerializers.put(serializable, new Serializer<>(serializable, to::apply, o -> from.apply((T) o)));
         return this;
     }
 
     public NBOSerializer unregister(Class<?> serializable) {
-        serializers.remove(serializable);
+        objectSerializers.remove(serializable);
         return this;
-    }
-
-    public Map<String, Object> serialize(Object object) {
-        if (object instanceof NBOSerializable serializable) {
-            return serializable.serialize();
-        }
-        Serializer serializer = serializers.get(object.getClass());
-        if (serializer != null) {
-            return serializer.to().convert(object);
-        }
-        throw new IllegalArgumentException("Input object " + object.getClass() + " must either be registered as Serializable or implement NBOSerializable interface.");
     }
 
 }
