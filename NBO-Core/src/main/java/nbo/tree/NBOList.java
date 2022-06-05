@@ -15,10 +15,18 @@ public class NBOList extends ArrayList<NBOTree> implements NBOTree, NBOTyped {
      * If null, ArrayList is used.
      */
     private String type = null;
+    private String elementType = null;
 
     @Override
-    public Object getValue() {
-        return "List";
+    public String toString() {
+        return (type == null ? "" : type) + "[" + (elementType == null ? "" : elementType + ";")
+                + String.join(",", stream().map(NBOTree::toString).toArray(CharSequence[]::new)) + "]";
+    }
+
+    @Override
+    public String toNBTString() {
+        return (type == null ? "" : type) + "[" + (elementType == null ? "" : elementType + ";")
+                + String.join(",", stream().map(NBOTree::toString).toArray(CharSequence[]::new)) + "]";
     }
 
     @Override

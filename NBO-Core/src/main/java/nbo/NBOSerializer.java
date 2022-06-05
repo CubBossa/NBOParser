@@ -175,6 +175,9 @@ public class NBOSerializer {
                 }
                 return (T) serializer.from().convert(actualValues);
             } else {
+                if (list.getElementType() != null) {
+                    //TODO return array of type here
+                }
                 return (T) new ArrayList<>(actualValues);
             }
         }

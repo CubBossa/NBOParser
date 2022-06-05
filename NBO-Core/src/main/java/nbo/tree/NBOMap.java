@@ -18,12 +18,16 @@ public class NBOMap extends LinkedHashMap<String, NBOTree> implements NBOTree, N
 
     @Override
     public String toString() {
-        return super.toString();
+        return (type == null ? "" : type) + "{" + String.join(",", entrySet().stream()
+                .map(e -> e.getKey() + ":" + e.getValue().toString())
+                .toArray(CharSequence[]::new)) + "}";
     }
 
     @Override
-    public Object getValue() {
-        return "Map";
+    public String toNBTString() {
+        return (type == null ? "" : type) + "{" + String.join(",", entrySet().stream()
+                .map(e -> e.getKey() + ":" + e.getValue().toNBTString())
+                .toArray(CharSequence[]::new)) + "}";
     }
 
     @Override

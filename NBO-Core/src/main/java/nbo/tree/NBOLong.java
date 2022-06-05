@@ -23,12 +23,12 @@ public class NBOLong implements NBOTree {
     }
 
     @Override public String toString() {
-        return getValue().toString() + "l";
+        return getValueRaw().toString() + "l";
     }
 
     @Override
-    public Object getValue() {
-        return value;
+    public String toNBTString() {
+        return toString();
     }
 
     @Override

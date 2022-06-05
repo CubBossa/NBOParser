@@ -1,6 +1,6 @@
-package nbo;
+package nbo.exception;
 
-public class NBOParseException extends Exception {
+public class NBOParseException extends NBOException {
 
     public NBOParseException(String message) {
         super(message);

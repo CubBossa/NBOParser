@@ -1,5 +1,7 @@
 package nbo;
 
+import nbo.exception.NBOParseException;
+import nbo.exception.NBOReferenceException;
 import nbo.tree.NBOMap;
 import nbo.tree.NBOTree;
 import org.junit.jupiter.api.Test;
@@ -52,6 +54,7 @@ public class NBOParserTest {
 	}
 
 	private static final File TEST_FILE_VECTOR = new File("src/test/resources/vector_test.nbo");
+	private static final File TEST_FILE_05 = new File("src/test/resources/test_05.nbo");
 
 	@Test
 	void parseStringAssignment() throws NBOParseException, ClassNotFoundException {
@@ -135,7 +138,7 @@ public class NBOParserTest {
 	}
 
 	@Test
-	public void readFromFile() throws IOException, NBOParseException, ClassNotFoundException {
+	public void readFromFile() throws IOException, NBOParseException, ClassNotFoundException, NBOReferenceException {
 		NBOSerializer serializer = NBOFile.DEFAULT_SERIALIZER
 				.registerMapSerializer(
 						Vector3f.class,
@@ -173,4 +176,14 @@ public class NBOParserTest {
 		assertEquals(unit2, matrix3f.col2);
 		assertEquals(unit3, matrix3f.col3);
 	}
+
+	/*
+	Should work but not yet implemented
+	@Test
+	public void testListElementType() throws NBOReferenceException, IOException, NBOParseException, ClassNotFoundException {
+		NBOFile file = NBOFile.loadFile(TEST_FILE_05, NBOFile.DEFAULT_SERIALIZER);
+
+		assertEquals(short[].class, (file.getReferenceObjects().get("a")).getClass());
+	}
+	 */
 }

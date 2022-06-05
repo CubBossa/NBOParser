@@ -15,12 +15,12 @@ public class NBOReference implements NBOTree {
 
     @Override
     public String toString() {
-        return "&" + getValue();
+        return "&" + reference;
     }
 
     @Override
-    public String getValue() {
-        return reference;
+    public String toNBTString() {
+        return "'reference: " + reference + "'";
     }
 
     @Override

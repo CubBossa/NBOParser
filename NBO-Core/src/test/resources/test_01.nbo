@@ -1,3 +1,7 @@
 <include "src/test/resources/test_02.nbo">
 
-a := [&b, &b, &b]
+mat := Mat {
+    col1: &unit_1,
+    col2: &unit_2,
+    col3: &unit_3,
+}

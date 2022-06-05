@@ -25,12 +25,12 @@ public class NBOString implements NBOTree {
 
     @Override
     public String toString() {
-        return (String) getValue();
+        return quote + getValueRaw() + quote;
     }
 
     @Override
-    public Object getValue() {
-        return quote + value + quote;
+    public String toNBTString() {
+        return toString();
     }
 
     public String getValueRaw() {

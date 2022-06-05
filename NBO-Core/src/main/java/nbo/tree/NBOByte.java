@@ -22,13 +22,14 @@ public class NBOByte implements NBOTree {
         value = Byte.parseByte(input);
     }
 
-    @Override public String toString() {
-        return getValue().toString() + "b";
+    @Override
+    public String toString() {
+        return getValueRaw().toString() + "b";
     }
 
     @Override
-    public Object getValue() {
-        return value;
+    public String toNBTString() {
+        return toString();
     }
 
     @Override

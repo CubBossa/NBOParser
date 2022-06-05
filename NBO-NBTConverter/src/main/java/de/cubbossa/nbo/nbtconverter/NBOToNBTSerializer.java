@@ -14,6 +14,7 @@ public class NBOToNBTSerializer {
 	}
 
 	private static NBTCompound serialize(Map<String, Object> map) {
+
 		return new NBTContainer();
 	}
 

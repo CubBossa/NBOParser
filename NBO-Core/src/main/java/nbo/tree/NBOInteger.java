@@ -18,17 +18,17 @@ public class NBOInteger implements NBOTree {
         if(input.startsWith("'") || input.startsWith("\"")) {
             input = input.substring(1, input.length() - 1);
         }
-        input = input.toLowerCase(Locale.ROOT).replace("f", "");
+        input = input.toLowerCase(Locale.ROOT).replace("i", "");
         value = Integer.parseInt(input);
     }
 
     @Override public String toString() {
-        return getValue().toString();
+        return getValueRaw().toString();
     }
 
     @Override
-    public Object getValue() {
-        return value;
+    public String toNBTString() {
+        return toString();
     }
 
     @Override

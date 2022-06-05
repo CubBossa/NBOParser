@@ -5,13 +5,14 @@ import java.util.List;
 
 public class NBONull implements NBOTree {
 
-	@Override public String toString() {
+	@Override
+	public String toString() {
 		return "null";
 	}
 
 	@Override
-	public Object getValue() {
-		return null;
+	public String toNBTString() {
+		return toString();
 	}
 
 	@Override

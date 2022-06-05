@@ -22,13 +22,14 @@ public class NBOShort implements NBOTree {
         value = Short.parseShort(input);
     }
 
-    @Override public String toString() {
-        return getValue().toString() + "s";
+    @Override
+    public String toString() {
+        return getValueRaw().toString() + "s";
     }
 
     @Override
-    public Object getValue() {
-        return value;
+    public String toNBTString() {
+        return toString();
     }
 
     @Override

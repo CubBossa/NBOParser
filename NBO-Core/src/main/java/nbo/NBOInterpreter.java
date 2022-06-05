@@ -1,18 +1,20 @@
 package nbo;
 
+import nbo.exception.NBOReferenceException;
+import nbo.tree.NBOReference;
 import nbo.tree.NBOTree;
-
-import java.util.HashMap;
-import java.util.Map;
 
 public class NBOInterpreter {
 
-	public Map<String, Object> interpret(NBOTree tree) throws NBOParseException {
-		checkReferences(tree);
-		return new HashMap<>();
+	public void interpret(NBOTree tree, NBOSerializationContext context) throws NBOReferenceException {
+		checkReferences(tree, context);
 	}
 
-	public void checkReferences(NBOTree tree) throws NBOParseException {
-
+	public void checkReferences(NBOTree tree, NBOSerializationContext context) throws NBOReferenceException {
+		for (NBOReference reference : tree.getSubTrees().stream().filter(t -> t instanceof NBOReference).map(t -> (NBOReference) t).toList()) {
+			if (context.getReferenceObjects().keySet().stream().noneMatch(string -> reference.getValueRaw().equals(string))) {
+				throw new NBOReferenceException(reference);
+			}
+		}
 	}
 }

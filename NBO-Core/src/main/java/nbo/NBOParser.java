@@ -1,6 +1,7 @@
 package nbo;
 
 import lombok.Getter;
+import nbo.exception.NBOParseException;
 import nbo.tree.*;
 
 import java.util.*;
@@ -17,6 +18,7 @@ public class NBOParser {
     public static final Token TAB = new Token("TAB", Pattern.compile("\t"));
     public static final Token CARRIAGE_RETURN = new Token("CARRIAGE_RETURN", Pattern.compile("\r"));
     public static final Token BACKSPACE = new Token("BACKSPACE", Pattern.compile("\b"));
+    public static final Token SEMICOLON = new Token("SEMICOLON", Pattern.compile(";"));
     public static final Token COLON = new Token("COLON", Pattern.compile(":"));
     public static final Token ASSIGN = new Token("ASSIGN", Pattern.compile(":="));
     public static final Token NULL = new Token("NULL", Pattern.compile("(?i)null"));
@@ -57,6 +59,7 @@ public class NBOParser {
 
         tokenizer.addToken(SEPARATOR);
         tokenizer.addToken(ASSIGN);
+        tokenizer.addToken(SEMICOLON);
         tokenizer.addToken(COLON);
 
         tokenizer.addToken(NULL);
@@ -214,9 +217,8 @@ public class NBOParser {
     }
 
     private NBOList parseList(Stack<Tokenizer.Match> tokens, String type) throws NBOParseException {
-        NBOList list = new NBOList();
+        NBOList list = parseListBlock(tokens);
         list.setType(type);
-        list.addAll(parseListBlock(tokens));
         return list;
     }
 
@@ -256,7 +258,14 @@ public class NBOParser {
         }
         tokens.pop();
 
+        String elementType = null;
+        if (tokens.get(tokens.size() - 2).token().equals(SEMICOLON)) {
+            elementType = tokens.pop().string();
+            tokens.pop();
+        }
         NBOList tree = new NBOList();
+        tree.setElementType(elementType);
+
         boolean noComma = false;
         while (!tokens.empty() && !tokens.peek().token().equals(LIST_CLOSE)) {
             if (noComma) {

@@ -4,9 +4,11 @@ import java.util.List;
 
 public interface NBOTree {
 
-    List<NBOTree> getSubTrees();
+    String toString();
 
-    Object getValue();
+    String toNBTString();
+
+    List<NBOTree> getSubTrees();
 
     Object getValueRaw();
 }

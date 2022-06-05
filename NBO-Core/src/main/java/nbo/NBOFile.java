@@ -2,7 +2,12 @@ package nbo;
 
 import lombok.Getter;
 import lombok.Setter;
-import nbo.tree.*;
+import nbo.exception.NBOParseException;
+import nbo.exception.NBOReferenceException;
+import nbo.tree.NBOList;
+import nbo.tree.NBOMap;
+import nbo.tree.NBOString;
+import nbo.tree.NBOTree;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -58,28 +63,35 @@ public class NBOFile extends NBOSerializationContext {
     private NBOPrettyPrinter prettyPrinter = new NBOPrettyPrinter();
     private NBOMap root = new NBOMap();
 
-    public static NBOFile loadFile(File inputFile, NBOSerializer serializer) throws IOException, NBOParseException, ClassNotFoundException {
-        return loadFile(inputFile, serializer, new ArrayList<>());
+    public static NBOFile loadFile(File inputFile, NBOSerializer serializer) throws IOException, NBOParseException, ClassNotFoundException, NBOReferenceException {
+        return loadFile(inputFile, serializer, new NBOSerializationContext());
     }
 
-    public static NBOFile loadFile(File inputFile, NBOSerializer serializer, List<File> dontImport) throws IOException, NBOParseException, ClassNotFoundException {
-        FileInputStream stream = new FileInputStream(inputFile);
+    public static NBOFile loadFile(File file, NBOSerializer serializer, NBOSerializationContext context) throws IOException, NBOParseException, ClassNotFoundException, NBOReferenceException {
+
+        FileInputStream stream = new FileInputStream(file);
         String input = new String(stream.readAllBytes());
         stream.close();
 
-        NBOFile file = new NBOFile();
-        file.setSerializer(serializer);
-        file.getFileIncludes().add(inputFile);
-        dontImport.add(inputFile);
+        NBOFile nboFile = new NBOFile();
+        nboFile.setSerializer(serializer);
+        nboFile.getFileIncludes().add(file);
+        context.getFileIncludes().add(file);
 
         NBOParser parser = new NBOParser();
         parser.tokenize(input);
-        file.root = parser.createAST();
-        new NBOInterpreter().interpret(file.root);
+        nboFile.root = parser.createAST();
+        new NBOInterpreter().interpret(nboFile.root, nboFile);
 
-        NBOList includes = (NBOList) file.root.get(KEY_INCLUDES);
-        NBOMap imports = (NBOMap) file.root.get(KEY_IMPORTS);
-        NBOMap objects = (NBOMap) file.root.get(KEY_OBJECTS);
+        NBOList includes = (NBOList) nboFile.root.get(KEY_INCLUDES);
+        NBOMap imports = (NBOMap) nboFile.root.get(KEY_IMPORTS);
+        NBOMap objects = (NBOMap) nboFile.root.get(KEY_OBJECTS);
+
+        // Add all file imports to the context
+        imports.forEach((s, nboTree) -> {
+            nboFile.getClassImports().put(s, ((NBOString) nboTree).getValueRaw());
+            context.getClassImports().put(s, ((NBOString) nboTree).getValueRaw());
+        });
 
         // import each file if has not been loaded yet.
         for (NBOTree tree : includes) {
@@ -88,25 +100,26 @@ public class NBOFile extends NBOSerializationContext {
 
 
             // Skip if loaded
-            if (file.getFileIncludes().stream().anyMatch(f -> f.getAbsolutePath().equals(loadFile.getAbsolutePath()))
-                    || dontImport.stream().anyMatch(f -> f.equals(loadFile))) {
+            if (context.getFileIncludes().stream().anyMatch(f -> f.equals(loadFile))) {
                 Logger.getAnonymousLogger().log(Level.WARNING, "Loop detected, ignoring file: " + loadFile.getAbsolutePath());
                 continue;
             }
 
             // Else load and insert in imports and objects
-            NBOFile loadedFile = loadFile(loadFile, serializer, dontImport);
-            file.getFileIncludes().addAll(loadedFile.getFileIncludes());
-            file.getClassImports().putAll(loadedFile.getClassImports());
-            file.getReferenceObjects().putAll(loadedFile.getReferenceObjects());
+            NBOFile subNboFile = loadFile(loadFile, serializer, context);
+            nboFile.getFileIncludes().addAll(subNboFile.getFileIncludes());
+            nboFile.getClassImports().putAll(subNboFile.getClassImports());
+            context.getClassImports().putAll(subNboFile.getClassImports());
+            nboFile.getReferenceObjects().putAll(subNboFile.getReferenceObjects());
+            context.getReferenceObjects().putAll(subNboFile.getReferenceObjects());
         }
-        imports.forEach((s, nboTree) -> file.getClassImports().put(s, ((NBOString) nboTree).getValueRaw()));
 
         for (var entry : objects.entrySet()) {
-            Object deserialized = serializer.deserialize(entry.getValue(), file);
-            file.getReferenceObjects().put(entry.getKey(), deserialized);
+            Object deserialized = serializer.deserialize(entry.getValue(), context);
+            nboFile.getReferenceObjects().put(entry.getKey(), deserialized);
+            context.getReferenceObjects().put(entry.getKey(), deserialized);
         }
-        return file;
+        return nboFile;
     }
 
     public <T> T get(String key) {

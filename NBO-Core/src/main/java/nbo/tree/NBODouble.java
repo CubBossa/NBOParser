@@ -22,13 +22,14 @@ public class NBODouble implements NBOTree {
         value = Double.parseDouble(input);
     }
 
-    @Override public String toString() {
-        return getValue().toString() + "d";
+    @Override
+    public String toString() {
+        return getValueRaw().toString() + "d";
     }
 
     @Override
-    public Object getValue() {
-        return value;
+    public String toNBTString() {
+        return toString();
     }
 
     @Override

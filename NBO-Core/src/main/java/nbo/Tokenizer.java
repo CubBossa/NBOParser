@@ -1,5 +1,7 @@
 package nbo;
 
+import nbo.exception.NBOParseException;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.MatchResult;

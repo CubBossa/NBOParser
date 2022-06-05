@@ -23,12 +23,12 @@ public class NBOBool implements NBOTree {
     }
 
     @Override public String toString() {
-        return getValue().toString();
+        return getValueRaw().toString();
     }
 
     @Override
-    public Object getValue() {
-        return value;
+    public String toNBTString() {
+        return (value ? "1" : "0") + "B";
     }
 
     @Override

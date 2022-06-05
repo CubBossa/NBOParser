@@ -1,5 +1,6 @@
 package nbo;
 
+import nbo.exception.NBOParseException;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
