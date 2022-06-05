@@ -20,7 +20,7 @@ public class NBOParser {
     public static final Token COLON = new Token("COLON", Pattern.compile(":"));
     public static final Token ASSIGN = new Token("ASSIGN", Pattern.compile(":="));
     public static final Token NULL = new Token("NULL", Pattern.compile("(?i)null"));
-    public static final Token KEY = new Token("KEY", Pattern.compile("[a-zA-Z][a-zA-Z0-9_.$]*"));
+    public static final Token KEY = new Token("KEY", Pattern.compile("[a-zA-Z][a-zA-Z0-9_.$-]*"));
     public static final Token BOOLEAN = new Token("BOOLEAN", Pattern.compile("([\"']?)((true|false)|([10][bB]))\\1"));
     public static final Token BYTE = new Token("BOOLEAN", Pattern.compile("([\"']?)[0-9]+[bB]\\1"));
     public static final Token FLOAT = new Token("FLOAT", Pattern.compile("([\"']?)([0-9]+(([fF]|\\.[0-9]+)|\\.))[fF]?\\1"));
@@ -101,10 +101,10 @@ public class NBOParser {
         for (int i = tokenMatches.size() - 1; i >= 0; i--) {
             matches.add(tokenMatches.get(i));
         }
+        NBOList includes = new NBOList();
         NBOMap imports = new NBOMap();
         while (!matches.empty() && matches.peek().token().equals(WITH_OPEN)) {
-            var entry = parseImport(matches);
-            imports.put(entry.getKey(), entry.getValue());
+            parseHeader(matches, imports, includes);
         }
         NBOMap objects = new NBOMap();
         while (!matches.empty()) {
@@ -112,25 +112,46 @@ public class NBOParser {
             objects.put(entry.getKey(), entry.getValue());
         }
         NBOMap root = new NBOMap();
+        root.put(NBOFile.KEY_INCLUDES, includes);
         root.put(NBOFile.KEY_IMPORTS, imports);
         root.put(NBOFile.KEY_OBJECTS, objects);
         return root;
     }
 
-    private Map.Entry<String, NBOString> parseImport(Stack<Tokenizer.Match> tokens) throws NBOParseException {
+    private void parseHeader(Stack<Tokenizer.Match> tokens, NBOMap imports, NBOList includes) throws NBOParseException {
         if (tokens.empty() || !tokens.peek().token().equals(WITH_OPEN)) {
-            throw new NBOParseException("An import segment has to start with '<'.", input, tokens.peek().startIndex());
+            throw new NBOParseException("A header segment has to start with '<'.", input, tokens.peek().startIndex());
         }
         tokens.pop();
-        Tokenizer.Match with;
-        if (!tokens.empty() && tokens.peek().token().equals(KEY)) {
-            with = tokens.pop();
-            if (!with.string().equalsIgnoreCase("with")) {
-                throw new NBOParseException("An import segment has to be formatted <with [alias] as [classname]>.", input, with.startIndex());
-            }
-        } else {
-            throw new NBOParseException("An import segment has to be formatted <with [alias] as [classname]>.");
+        if (tokens.empty() || !tokens.peek().token().equals(KEY)) {
+            throw new NBOParseException("A header segment has to start with a key 'include' or 'with'.");
         }
+        Tokenizer.Match key = tokens.pop();
+        if (key.string().equalsIgnoreCase("include")) {
+            includes.add(parseInclude(tokens));
+        } else if (key.string().equalsIgnoreCase("with")) {
+            var entry = parseImport(tokens);
+            imports.put(entry.getKey(), entry.getValue());
+        } else {
+            throw new NBOParseException("A header segment has to start with a key 'include' or 'with'.", input, key.startIndex());
+        }
+    }
+
+    private NBOString parseInclude(Stack<Tokenizer.Match> tokens) throws NBOParseException {
+
+        Tokenizer.Match file;
+        if (!tokens.empty() && tokens.peek().token().equals(QUOTE)) {
+            file = tokens.pop();
+        } else {
+            throw new NBOParseException("An import segment has to be formatted <include [file]>.");
+        }
+        if (tokens.empty() || !tokens.pop().token().equals(WITH_CLOSE)) {
+            throw new NBOParseException("An import segment has to be closed with '>'.", input, file.startIndex() + file.string().length());
+        }
+        return new NBOString(file.string(), '\0');
+    }
+
+    private Map.Entry<String, NBOString> parseImport(Stack<Tokenizer.Match> tokens) throws NBOParseException {
         Tokenizer.Match alias;
         if (!tokens.empty() && tokens.peek().token().equals(KEY)) {
             alias = tokens.pop();
@@ -154,7 +175,7 @@ public class NBOParser {
         if (tokens.empty() || !tokens.pop().token().equals(WITH_CLOSE)) {
             throw new NBOParseException("An import segment has to be closed with '>'.", input, className.startIndex() + className.string().length());
         }
-        return new AbstractMap.SimpleEntry<>(alias.string(), new NBOString(className.string()));
+        return new AbstractMap.SimpleEntry<>(alias.string(), new NBOString(className.string(), '\0'));
     }
 
     private Map.Entry<String, NBOTree> parseDeclaration(Stack<Tokenizer.Match> tokens) throws NBOParseException {
@@ -165,7 +186,7 @@ public class NBOParser {
         if (tokens.empty() || !tokens.pop().token().equals(ASSIGN)) {
             throw new NBOParseException("A declaration must be of format [name] := [type]{[data...]}.", input, tokens.empty() ? input.length() : tokens.peek().startIndex());
         }
-        return new AbstractMap.SimpleEntry<>(object.string(), parseGroup(tokens));
+        return new AbstractMap.SimpleEntry<>(object.string(), parseValue(tokens));
     }
 
     private NBOTree parseGroup(Stack<Tokenizer.Match> tokens) throws NBOParseException {

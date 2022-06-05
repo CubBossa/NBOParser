@@ -7,29 +7,28 @@ import nbo.tree.*;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.function.Function;
+import java.util.function.BiFunction;
 import java.util.stream.Collectors;
 
 @Getter
 @Setter
 public class NBOPrettyPrinter {
 
+	private boolean useHeadings = true;
+	private boolean useAliases = true;
+	private boolean useReferences = true;
 	private int listInlineLength = 3;
 	private int mapInlineLength = 3;
 	private int maxInlineLength = 70;
 	private String indent = "    ";
 	private String lineBreak = "\n";
-	private final Map<Class<? extends NBOTree>, Function<NBOTree, String>> prettyMethods;
+	private Map<Class<? extends NBOTree>, BiFunction<NBOSerializationContext, NBOTree, String>> prettyMethods = loadPrettyMethods();
 
-	public NBOPrettyPrinter() {
-		this(new NBOMap());
-	}
+	private Map<Class<? extends NBOTree>, BiFunction<NBOSerializationContext, NBOTree, String>> loadPrettyMethods() {
 
-	public NBOPrettyPrinter(NBOMap imports) {
-
-		Function<NBOMap, String> mapString = tree -> {
+		BiFunction<NBOSerializationContext, NBOMap, String> mapString = (context, tree) -> {
 			List<String> inner = tree.entrySet().stream()
-					.map(e -> e.getKey() + ": " + (e.getValue() == null ? null : format(e.getValue()).replace(lineBreak, lineBreak + indent)))
+					.map(e -> e.getKey() + ": " + (e.getValue() == null ? null : format(e.getValue(), context).replace(lineBreak, lineBreak + indent)))
 					.collect(Collectors.toCollection(ArrayList::new));
 
 			return inner.size() > mapInlineLength || inner.stream().anyMatch(s -> s.contains("\n")) || inner.stream().mapToInt(String::length).sum() > maxInlineLength ?
@@ -37,56 +36,71 @@ public class NBOPrettyPrinter {
 					"{" + String.join(", ", inner) + "}";
 		};
 
-		this.prettyMethods = new LinkedHashMapBuilder<Class<? extends NBOTree>, Function<NBOTree, String>>()
-				.put(NBONull.class, tree -> "null")
-				.put(NBOString.class, Object::toString)
-				.put(NBOInteger.class, Object::toString)
-				.put(NBOFloat.class, Object::toString)
-				.put(NBODouble.class, Object::toString)
-				.put(NBOBool.class, Object::toString)
-				.put(NBOByte.class, Object::toString)
-				.put(NBOShort.class, Object::toString)
-				.put(NBOInteger.class, Object::toString)
-				.put(NBOLong.class, Object::toString)
-				.put(NBOReference.class, Object::toString)
-				.put(NBOMap.class, tree -> {
+		return new LinkedHashMapBuilder<Class<? extends NBOTree>, BiFunction<NBOSerializationContext, NBOTree, String>>()
+				.put(NBONull.class, (context, tree) -> "null")
+				.put(NBOString.class, (context, tree) -> tree.toString())
+				.put(NBOInteger.class, (context, tree) -> tree.toString())
+				.put(NBOFloat.class, (context, tree) -> tree.toString())
+				.put(NBODouble.class, (context, tree) -> tree.toString())
+				.put(NBOBool.class, (context, tree) -> tree.toString())
+				.put(NBOByte.class, (context, tree) -> tree.toString())
+				.put(NBOShort.class, (context, tree) -> tree.toString())
+				.put(NBOInteger.class, (context, tree) -> tree.toString())
+				.put(NBOLong.class, (context, tree) -> tree.toString())
+				.put(NBOReference.class, (context, tree) -> tree.toString())
+				.put(NBOMap.class, (context, tree) -> {
 					String type = ((NBOMap) tree).getType();
-					String alias = imports.entrySet().stream().filter(e -> e.getValue().getValueRaw().equals(type)).map(Map.Entry::getKey).findFirst().orElse(null);
-					return (alias == null ? type : alias) + " " + mapString.apply((NBOMap) tree);
+					String alias = context.getClassImports().entrySet().stream().filter(e -> e.getValue().equals(type)).map(Map.Entry::getKey).findFirst().orElse(null);
+					return (alias == null ? type : alias) + " " + mapString.apply(context, (NBOMap) tree);
 				})
-				.put(NBOList.class, tree -> {
+				.put(NBOList.class, (context, tree) -> {
 					NBOList list = (NBOList) tree;
 					String type = list.getType();
-					String alias = imports.entrySet().stream().filter(e -> e.getValue().getValueRaw().equals(type)).map(Map.Entry::getKey).findFirst().orElse(null);
-					List<String> inner = list.stream().map(t -> format(t).replace(lineBreak, lineBreak + indent)).collect(Collectors.toList());
+					String alias = context.getClassImports().entrySet().stream().filter(e -> e.getValue().equals(type)).map(Map.Entry::getKey).findFirst().orElse(null);
+					List<String> inner = list.stream().map(t -> format(t, context).replace(lineBreak, lineBreak + indent)).collect(Collectors.toList());
 					return (alias != null ? alias + " " : "") + (list.size() > listInlineLength || inner.stream().anyMatch(s -> s.contains("\n")) ?
 							"[" + lineBreak + indent + inner.stream().collect(Collectors.joining("," + lineBreak + indent)) + lineBreak + "]" :
 							"[" + String.join(", ", inner) + "]");
 				}).build();
 	}
 
-	public String format(NBOTree tree) {
-		return prettyMethods.getOrDefault(tree.getClass(), t -> "NO PRETTY METHOD PROVIDED").apply(tree);
+	public String format(NBOTree tree, NBOSerializationContext context) {
+		return prettyMethods.getOrDefault(tree.getClass(), (c, t) -> "{No Pretty Method: " + tree.getClass().getName() + "}").apply(context, tree);
 	}
 
-	public String formatFile(NBOMap fileRoot) {
+	public String formatFile(NBOFile context) {
 		StringBuilder file = new StringBuilder();
 
-		NBOMap imports = (NBOMap) fileRoot.get(NBOFile.KEY_IMPORTS);
-		if (imports != null && !imports.isEmpty()) {
-			file.append("# IMPORTS").append(lineBreak);
-			for (var entry : imports.entrySet()) {
-				file.append(lineBreak).append("<with ").append(entry.getKey()).append(" as ").append(entry.getValue().getValue()).append(">");
+		NBOList includes = (NBOList) context.getRoot().get(NBOFile.KEY_INCLUDES);
+		if (includes != null && !includes.isEmpty()) {
+			if (useHeadings) {
+				file.append("# INCLUDES").append(lineBreak);
+			}
+			for (NBOTree fileName : includes) {
+				file.append(lineBreak).append("<include '").append(fileName.getValueRaw()).append("'>");
 			}
 			file.append(lineBreak.repeat(3));
 		}
-		NBOMap objects = (NBOMap) fileRoot.get(NBOFile.KEY_OBJECTS);
+
+		NBOMap imports = (NBOMap) context.getRoot().get(NBOFile.KEY_IMPORTS);
+		if (imports != null && !imports.isEmpty()) {
+			if (useHeadings) {
+				file.append("# IMPORTS").append(lineBreak);
+			}
+			for (var entry : imports.entrySet()) {
+				file.append(lineBreak).append("<with ").append(entry.getKey()).append(" as ").append(entry.getValue().getValueRaw()).append(">");
+			}
+			file.append(lineBreak.repeat(3));
+		}
+		NBOMap objects = (NBOMap) context.getRoot().get(NBOFile.KEY_OBJECTS);
 		if (objects != null && !objects.isEmpty()) {
-			file.append("# OBJECTS").append(lineBreak);
+			if (useHeadings) {
+				file.append("# OBJECTS").append(lineBreak);
+			}
 			for (var entry : objects.entrySet()) {
 				file.append(lineBreak).append(entry.getKey())
 						.append(" := ")
-						.append(entry.getValue() == null ? "null" : format(entry.getValue()))
+						.append(entry.getValue() == null ? "null" : format(entry.getValue(), context))
 						.append(lineBreak);
 			}
 		}

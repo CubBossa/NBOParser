@@ -54,6 +54,14 @@ public class NBOParserTest {
 	private static final File TEST_FILE_VECTOR = new File("src/test/resources/vector_test.nbo");
 
 	@Test
+	void parseStringAssignment() throws NBOParseException, ClassNotFoundException {
+		NBOSerializer serializer = NBOFile.DEFAULT_SERIALIZER;
+		Map<String, Object> map = serializer.deserialize((NBOTree) new NBOParser().createAST("test-string := 'a test'"), new NBOSerializationContext());
+		Map<String, Object> objects = (Map<String, Object>) map.get(NBOFile.KEY_OBJECTS);
+		assertEquals(String.class, objects.get("test-string").getClass());
+	}
+
+	@Test
 	void parseMapAssignment() throws NBOParseException, ClassNotFoundException {
 		NBOSerializer serializer = NBOFile.DEFAULT_SERIALIZER;
 		Map<String, Object> map = serializer.deserialize((NBOTree) new NBOParser().createAST("list := [0, 1, 2]"), new NBOSerializationContext());
@@ -91,7 +99,7 @@ public class NBOParserTest {
 	}
 
 	@Test
-	public void writeToFile() throws NBOParseException, ClassNotFoundException {
+	public void writeToFile() throws NBOParseException, ClassNotFoundException, IOException {
 		NBOSerializer serializer = NBOFile.DEFAULT_SERIALIZER
 				.registerMapSerializer(
 						Vector3f.class,
@@ -103,7 +111,8 @@ public class NBOParserTest {
 						Matrix3f::serialize
 				);
 
-		NBOFile file = NBOFile.loadString("", serializer);
+		NBOFile file = new NBOFile();
+		file.setSerializer(serializer);
 		file.setImport("Vec", Vector3f.class);
 		file.setImport("Mat", Matrix3f.class);
 		file.setObject("matrix", new Matrix3f(new Vector3f(0, 1, 2), new Vector3f(3, 4, 5), new Vector3f(4, 5, 6)));
@@ -111,8 +120,8 @@ public class NBOParserTest {
 		assertEquals("""
 				# IMPORTS
 
-				<with Vec as 'nbo.NBOParserTest$Vector3f'>
-				<with Mat as 'nbo.NBOParserTest$Matrix3f'>
+				<with Vec as nbo.NBOParserTest$Vector3f>
+				<with Mat as nbo.NBOParserTest$Matrix3f>
 
 
 				# OBJECTS
@@ -122,7 +131,7 @@ public class NBOParserTest {
 				    col3: Vec {x: 4.0, y: 5.0, z: 6.0},
 				    col1: Vec {x: 0.0, y: 1.0, z: 2.0}
 				}
-				""", NBOFile.formatToFileString(file.getRoot()));
+				""", file.formatToFileString());
 	}
 
 	@Test

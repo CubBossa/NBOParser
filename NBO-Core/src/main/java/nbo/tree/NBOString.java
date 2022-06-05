@@ -9,10 +9,18 @@ import java.util.List;
 @Getter
 @Setter
 public class NBOString implements NBOTree {
+
     private String value;
+    private char quote;
 
     public NBOString(String value) {
         this.value = value.startsWith("'") || value.startsWith("\"") ? value.substring(1, value.length() - 1) : value;
+        this.quote = '\'';
+    }
+
+    public NBOString(String value, char quote) {
+        this.value = value.startsWith("'") || value.startsWith("\"") ? value.substring(1, value.length() - 1) : value;
+        this.quote = quote;
     }
 
     @Override
@@ -22,7 +30,7 @@ public class NBOString implements NBOTree {
 
     @Override
     public Object getValue() {
-        return "'" + value + "'";
+        return quote + value + quote;
     }
 
     public String getValueRaw() {

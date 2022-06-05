@@ -11,6 +11,11 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 class TokenizerTest {
 
 	@Test
+	void tokenizeSimpleList() {
+
+	}
+
+	@Test
 	void tokenizeValid() throws NBOParseException {
 
 		String input = "assign := Type {float: 1.0f, int: 0x1f0, bool: 1b}";

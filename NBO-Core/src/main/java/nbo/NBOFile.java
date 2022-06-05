@@ -2,9 +2,7 @@ package nbo;
 
 import lombok.Getter;
 import lombok.Setter;
-import nbo.tree.NBOMap;
-import nbo.tree.NBOString;
-import nbo.tree.NBOTree;
+import nbo.tree.*;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -12,10 +10,12 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 @Getter
 @Setter
-public class NBOFile {
+public class NBOFile extends NBOSerializationContext {
 
     public static final NBOSerializer DEFAULT_SERIALIZER = new NBOSerializer()
             .registerListSerializer(HashSet.class, HashSet::new, ArrayList::new)
@@ -50,58 +50,78 @@ public class NBOFile {
                 return map;
             });
 
+    public static final String KEY_INCLUDES = "includes";
     public static final String KEY_IMPORTS = "imports";
     public static final String KEY_OBJECTS = "objects";
 
     private NBOSerializer serializer;
-    private final Map<String, Class<?>> importMap;
-    private final Map<String, Object> objectMap;
+    private NBOPrettyPrinter prettyPrinter = new NBOPrettyPrinter();
     private NBOMap root = new NBOMap();
 
-    private NBOFile() {
-        importMap = new LinkedHashMap<>();
-        objectMap = new LinkedHashMap<>();
+    public static NBOFile loadFile(File inputFile, NBOSerializer serializer) throws IOException, NBOParseException, ClassNotFoundException {
+        return loadFile(inputFile, serializer, new ArrayList<>());
     }
 
-    public static NBOFile loadFile(File file, NBOSerializer serializer) throws IOException, NBOParseException, ClassNotFoundException {
-        FileInputStream stream = new FileInputStream(file);
+    public static NBOFile loadFile(File inputFile, NBOSerializer serializer, List<File> dontImport) throws IOException, NBOParseException, ClassNotFoundException {
+        FileInputStream stream = new FileInputStream(inputFile);
         String input = new String(stream.readAllBytes());
         stream.close();
-        return loadString(input, serializer);
-    }
 
-    public static NBOFile loadString(String input, NBOSerializer serializer) throws NBOParseException, ClassNotFoundException {
         NBOFile file = new NBOFile();
         file.setSerializer(serializer);
+        file.getFileIncludes().add(inputFile);
+        dontImport.add(inputFile);
 
         NBOParser parser = new NBOParser();
         parser.tokenize(input);
         file.root = parser.createAST();
         new NBOInterpreter().interpret(file.root);
 
-        NBOMap objects = (NBOMap) file.root.get(KEY_OBJECTS);
+        NBOList includes = (NBOList) file.root.get(KEY_INCLUDES);
         NBOMap imports = (NBOMap) file.root.get(KEY_IMPORTS);
+        NBOMap objects = (NBOMap) file.root.get(KEY_OBJECTS);
 
-        NBOSerializationContext context = new NBOSerializationContext();
-        imports.forEach((s, nboTree) -> context.getClassImports().put(s, ((NBOString) nboTree).getValueRaw()));
+        // import each file if has not been loaded yet.
+        for (NBOTree tree : includes) {
+            String relativeFilePath = (String) tree.getValueRaw();
+            File loadFile = new File(relativeFilePath);
+
+
+            // Skip if loaded
+            if (file.getFileIncludes().stream().anyMatch(f -> f.getAbsolutePath().equals(loadFile.getAbsolutePath()))
+                    || dontImport.stream().anyMatch(f -> f.equals(loadFile))) {
+                Logger.getAnonymousLogger().log(Level.WARNING, "Loop detected, ignoring file: " + loadFile.getAbsolutePath());
+                continue;
+            }
+
+            // Else load and insert in imports and objects
+            NBOFile loadedFile = loadFile(loadFile, serializer, dontImport);
+            file.getFileIncludes().addAll(loadedFile.getFileIncludes());
+            file.getClassImports().putAll(loadedFile.getClassImports());
+            file.getReferenceObjects().putAll(loadedFile.getReferenceObjects());
+        }
+        imports.forEach((s, nboTree) -> file.getClassImports().put(s, ((NBOString) nboTree).getValueRaw()));
 
         for (var entry : objects.entrySet()) {
-            Object deserialized = serializer.deserialize(entry.getValue(), context);
-            file.objectMap.put(entry.getKey(), deserialized);
-            context.getReferenceObjects().put(entry.getKey(), deserialized);
+            Object deserialized = serializer.deserialize(entry.getValue(), file);
+            file.getReferenceObjects().put(entry.getKey(), deserialized);
         }
         return file;
     }
 
     public <T> T get(String key) {
-        return (T) objectMap.get(key);
+        return (T) getReferenceObjects().get(key);
     }
 
     public void setImport(String alias, Class<?> clazz) {
-        importMap.put(alias, clazz);
+        getClassImports().put(alias, clazz.getName());
         var imports = root.get(KEY_IMPORTS);
         if (imports != null) {
             ((NBOMap) imports).put(alias, new NBOString(clazz.getName()));
+        } else {
+            imports = new NBOMap();
+            ((NBOMap) imports).put(alias, new NBOString(clazz.getName()));
+            root.put(KEY_IMPORTS, imports);
         }
     }
 
@@ -110,21 +130,21 @@ public class NBOFile {
         if (objects != null) {
             objects.put(key, serializer.convertObjectToAst(object, this));
         }
-        objectMap.put(key, object);
+        getReferenceObjects().put(key, object);
         root.put(KEY_OBJECTS, objects);
     }
 
     public void save(File file) throws IOException {
         FileOutputStream stream = new FileOutputStream(file);
-        stream.write(formatToFileString(root).getBytes(StandardCharsets.UTF_8));
+        stream.write(formatToFileString().getBytes(StandardCharsets.UTF_8));
         stream.close();
     }
 
-    public static String format(NBOTree tree) {
-        return new NBOPrettyPrinter().format(tree);
+    public String format(NBOTree tree) {
+        return prettyPrinter.format(tree, this);
     }
 
-    public static String formatToFileString(NBOMap fileRoot) {
-        return new NBOPrettyPrinter((NBOMap) fileRoot.getOrDefault(KEY_IMPORTS, new NBOMap())).formatFile(fileRoot);
+    public String formatToFileString() {
+        return prettyPrinter.formatFile(this);
     }
 }

@@ -31,8 +31,8 @@ public class NBOSerializer {
         Serializer<Map<String, Object>> mapSerializer = objectSerializers.get(input.getClass());
         if (mapSerializer != null) {
             // Only create reference
-            if (file.getObjectMap().containsValue(input)) {
-                return new NBOReference(file.getObjectMap().entrySet().stream().filter(e -> e.getValue().equals(input)).findFirst().get().getKey());
+            if (file.getReferenceObjects().containsValue(input)) {
+                return new NBOReference(file.getReferenceObjects().entrySet().stream().filter(e -> e.getValue().equals(input)).findFirst().get().getKey());
             }
             // Create actual object
             NBOMap map = new NBOMap();
@@ -43,7 +43,7 @@ public class NBOSerializer {
 
             // Create import
             String alias = input.getClass().getSimpleName();
-            if (file.getImportMap().entrySet().stream().noneMatch(e -> e.getKey().equals(alias) || e.getValue().equals(input.getClass()))) {
+            if (file.getClassImports().entrySet().stream().noneMatch(e -> e.getKey().equals(alias) || e.getValue().equals(input.getClass().getName()))) {
                 file.setImport(alias, input.getClass());
             }
             return map;
@@ -53,8 +53,8 @@ public class NBOSerializer {
         Serializer<Collection<Object>> listSerializer = listSerializers.get(input.getClass());
         if (listSerializer != null) {
             // Only create reference
-            if (file.getObjectMap().containsValue(input)) {
-                return new NBOReference(file.getObjectMap().entrySet().stream().filter(e -> e.getValue().equals(input)).findFirst().get().getKey());
+            if (file.getReferenceObjects().containsValue(input)) {
+                return new NBOReference(file.getReferenceObjects().entrySet().stream().filter(e -> e.getValue().equals(input)).findFirst().get().getKey());
             }
             // Create actual object
             NBOList list = new NBOList();
@@ -65,7 +65,7 @@ public class NBOSerializer {
 
             // Create import
             String alias = input.getClass().getSimpleName();
-            if (file.getImportMap().entrySet().stream().noneMatch(e -> e.getKey().equals(alias) || e.getValue().equals(input.getClass()))) {
+            if (file.getClassImports().entrySet().stream().noneMatch(e -> e.getKey().equals(alias) || e.getValue().equals(input.getClass().getName()))) {
                 file.setImport(alias, input.getClass());
             }
             return list;
@@ -100,10 +100,6 @@ public class NBOSerializer {
             return l;
         }
         return convertObjectToAst(serialize(input), file);
-    }
-
-    public <T> T deserialize(String objectString) throws ClassNotFoundException {
-        return null; //TODO
     }
 
     public <T> T deserialize(NBOTree nboTree, NBOSerializationContext context) throws ClassNotFoundException {
