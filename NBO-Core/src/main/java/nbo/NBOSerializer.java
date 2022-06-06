@@ -39,7 +39,7 @@ public class NBOSerializer {
             map.setType(input.getClass().getName());
             map.putAll(mapSerializer.to().convert(input).entrySet().stream()
                     .map(e -> new AbstractMap.SimpleEntry<>(e.getKey(), convertObjectToAst(e.getValue(), file)))
-                    .collect(Collectors.toMap(AbstractMap.SimpleEntry::getKey, AbstractMap.SimpleEntry::getValue)));
+                    .collect(Collectors.toMap(AbstractMap.SimpleEntry::getKey, AbstractMap.SimpleEntry::getValue, (tree, tree2) -> tree2, () -> new LinkedHashMap<>())));
 
             // Create import
             String alias = input.getClass().getSimpleName();
@@ -61,7 +61,7 @@ public class NBOSerializer {
             list.setType(input.getClass().getName());
             list.addAll(listSerializer.to().convert(input).stream()
                     .map(e -> convertObjectToAst(e, file))
-                    .collect(Collectors.toList()));
+                    .collect(Collectors.toCollection(ArrayList::new)));
 
             // Create import
             String alias = input.getClass().getSimpleName();
