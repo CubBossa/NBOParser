@@ -27,11 +27,7 @@ public class NBOParserTest {
 		}
 
 		public Map<String, Object> serialize() {
-			return Map.of(
-					"x", x,
-					"y", y,
-					"z", z
-			);
+			return new LinkedHashMapBuilder<String, Object>().put("x", x).put("y", y).put("z", z).build();
 		}
 	}
 
@@ -45,16 +41,11 @@ public class NBOParserTest {
 		}
 
 		public Map<String, Object> serialize() {
-			return Map.of(
-					"col1", col1,
-					"col2", col2,
-					"col3", col3
-			);
+			return new LinkedHashMapBuilder<String, Object>().put("col1", col1).put("col2", col2).put("col3", col3).build();
 		}
 	}
 
 	private static final File TEST_FILE_VECTOR = new File("src/test/resources/vector_test.nbo");
-	private static final File TEST_FILE_05 = new File("src/test/resources/test_05.nbo");
 
 	@Test
 	void parseStringAssignment() throws NBOParseException, ClassNotFoundException {
@@ -130,9 +121,9 @@ public class NBOParserTest {
 				# OBJECTS
 
 				matrix := Mat {
+				    col1: Vec {x: 0.0, y: 1.0, z: 2.0},
 				    col2: Vec {x: 3.0, y: 4.0, z: 5.0},
-				    col3: Vec {x: 4.0, y: 5.0, z: 6.0},
-				    col1: Vec {x: 0.0, y: 1.0, z: 2.0}
+				    col3: Vec {x: 4.0, y: 5.0, z: 6.0}
 				}
 				""", file.formatToFileString());
 	}

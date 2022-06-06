@@ -1,6 +1,5 @@
 package de.cubbossa.nbo.bukkit;
 
-import nbo.NBOSerializer;
 import org.bukkit.*;
 import org.bukkit.advancement.Advancement;
 import org.bukkit.attribute.Attribute;

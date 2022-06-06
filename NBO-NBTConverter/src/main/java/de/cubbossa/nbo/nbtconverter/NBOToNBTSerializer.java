@@ -2,7 +2,6 @@ package de.cubbossa.nbo.nbtconverter;
 
 import de.tr7zw.nbtapi.NBTCompound;
 import de.tr7zw.nbtapi.NBTContainer;
-import nbo.NBOSerializer;
 
 import java.util.Map;
 
