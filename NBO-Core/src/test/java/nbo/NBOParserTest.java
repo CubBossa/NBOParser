@@ -109,7 +109,7 @@ public class NBOParserTest {
 		file.setSerializer(serializer);
 		file.setImport("Vec", Vector3f.class);
 		file.setImport("Mat", Matrix3f.class);
-		file.setObject("matrix", new Matrix3f(new Vector3f(0, 1, 2), new Vector3f(3, 4, 5), new Vector3f(4, 5, 6)));
+		file.setObject("matrix", new Matrix3f(new Vector3f(0, 1, 2), new Vector3f(-3, -4, -5), new Vector3f(4, 5, 6)));
 
 		assertEquals("""
 				# IMPORTS
@@ -122,7 +122,7 @@ public class NBOParserTest {
 
 				matrix := Mat {
 				    col1: Vec {x: 0.0, y: 1.0, z: 2.0},
-				    col2: Vec {x: 3.0, y: 4.0, z: 5.0},
+				    col2: Vec {x: -3.0, y: -4.0, z: -5.0},
 				    col3: Vec {x: 4.0, y: 5.0, z: 6.0}
 				}
 				""", file.formatToFileString());
