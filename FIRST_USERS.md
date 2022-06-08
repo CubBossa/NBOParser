@@ -4,11 +4,11 @@
 
 ## Content
 
-- [Basic Structure](#Basic Structure)
-- [Declaring Variables](#Declaring Variables)
-- [Maps vs Lists](#Maps and Lists)
+- [Basic Structure](#Basic_Structure)
+- [Declaring Variables](#Declaring_Variables)
+- [Maps vs Lists](#Maps_and_Lists)
 - [Imports](#Imports)
-- [Link multiple NBO Files](#Link multiple NBO Files)
+- [Link multiple NBO Files](#Link_multiple_NBO_Files)
 ---
 
 ## Basic Structure
